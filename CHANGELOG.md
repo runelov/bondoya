@@ -1,5 +1,11 @@
 # Endringslogg
 
+## 0.1.3 — Ordentlig app-ikon
+- Erstattet plassholder-ikonet med et design basert på konsept B
+  ("luftfoto-utsnitt") — Bondøyas faktiske kystlinje (hentet fra
+  OpenStreetMap-geometri, forenklet med shapely) som en cream-farget
+  øy omgitt av mørk sjø.
+
 ## 0.1.2 — Fjern utdatert meta-tag-advarsel
 - Lagt til standard `<meta name="mobile-web-app-capable">` ved siden av
   den Apple-spesifikke taggen (som alene ga en utdatert-advarsel i
