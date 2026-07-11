@@ -1,0 +1,14 @@
+name = "mittbondoya-ki-proxy"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# ANTHROPIC_API_KEY settes IKKE her — sett den med:
+#   wrangler secret put ANTHROPIC_API_KEY
+# aldri i denne filen eller noe annet sted i det offentlige repoet.
+
+[vars]
+ANTHROPIC_MODEL = "claude-sonnet-5"
+# Kommaseparert liste over opphav som får lov til å kalle proxyen (CORS).
+# Sett til den faktiske GitHub Pages-URL-en når den er kjent, f.eks.
+# "https://runelov.github.io"
+ALLOWED_ORIGIN = "*"

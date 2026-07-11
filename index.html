@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Mitt Bondøya</title>
+<meta name="description" content="Kartdrevet artsregistrering på Bondøya, med KI-gjenkjenning">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mitt Bondøya">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="map"></div>
+
+<header id="topBar">
+  <button id="setupToggle" class="iconBtn" aria-label="Innstillinger" title="Innstillinger">⚙️</button>
+  <div id="syncStatus" class="pill" hidden></div>
+  <button id="listToggle" class="iconBtn" aria-label="Funnliste" title="Funnliste">📋</button>
+</header>
+
+<!-- Setup / tilkobling til data-repo -->
+<div id="setupPanel" class="sheet" hidden>
+  <div class="sheetHandle"></div>
+  <h2>Koble til datarepo</h2>
+  <p class="hint">Lim inn tokenet du har fått delt. Det lagres kun på denne enheten.</p>
+  <label for="ghOwner">Eier</label>
+  <input id="ghOwner" type="text" value="runelov" autocomplete="off">
+  <label for="ghRepo">Repo</label>
+  <input id="ghRepo" type="text" value="mittbondoya-db" autocomplete="off">
+  <label for="ghToken">Token</label>
+  <input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_...">
+  <label for="kiProxyUrl">KI-proxy URL (valgfritt)</label>
+  <input id="kiProxyUrl" type="text" autocomplete="off" placeholder="https://mittbondoya-ki.<konto>.workers.dev">
+  <div class="sheetActions">
+    <button id="ghConnectBtn" class="primaryBtn">Koble til</button>
+    <button id="ghDisconnectBtn" class="secondaryBtn">Koble fra</button>
+  </div>
+  <p id="ghNote" class="note"></p>
+</div>
+
+<!-- Funnliste -->
+<div id="listPanel" class="sheet" hidden>
+  <div class="sheetHandle"></div>
+  <h2>Registrerte funn</h2>
+  <div id="filterRow" class="filterRow"></div>
+  <div id="findList" class="findList"></div>
+</div>
+
+<!-- Artsdetaljer -->
+<div id="detailPanel" class="sheet" hidden>
+  <div class="sheetHandle"></div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- Registrering: kamera/bilde -->
+<div id="registerPanel" class="sheet" hidden>
+  <div class="sheetHandle"></div>
+  <div id="registerContent"></div>
+</div>
+
+<button id="fabRegister" class="fab" aria-label="Registrer funn" title="Registrer funn">
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"></path>
+    <circle cx="12" cy="13" r="4"></circle>
+  </svg>
+</button>
+
+<input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="js/github-store.js"></script>
+<script src="js/offline-queue.js"></script>
+<script src="js/ki-client.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
