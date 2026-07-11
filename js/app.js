@@ -11,6 +11,8 @@ let artskartCache = []; // [{art, taxonId, lat, lon, dato}, ...] fra data/artska
 let activeFilter = 'alle';
 let pendingImageBlob = null;
 let pendingPosition = null; // {lat, lon}
+let pendingPositionKilde = null; // 'gps' | 'exif' | 'manuell' — vises i UI, se renderRegisterPanel
+let pendingTimestamp = null; // Date, forhåndsutfylt fra EXIF ved etterregistrering, alltid brukerjusterbar
 let pendingKiResultat = null;
 
 // ---------- oppstart ----------
@@ -184,10 +186,12 @@ function wireRegisterFlow(){
 function startRegistration(fraGalleri){
   pendingImageBlob = null;
   pendingPosition = null;
+  pendingPositionKilde = null;
+  pendingTimestamp = null;
   pendingKiResultat = null;
   if (!fraGalleri && navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      pos => { pendingPosition = { lat: pos.coords.latitude, lon: pos.coords.longitude }; },
+      pos => { pendingPosition = { lat: pos.coords.latitude, lon: pos.coords.longitude }; pendingPositionKilde = 'gps'; },
       () => { /* la brukeren velge i kart i stedet, se posisjonsvelgeren under */ },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -202,14 +206,44 @@ function pickPositionOnMap(){
   showToast('Trykk i kartet der bildet ble tatt');
   mapCtx.map.once('click', (e) => {
     pendingPosition = { lat: e.latlng.lat, lon: e.latlng.lng };
+    pendingPositionKilde = 'manuell';
     toggleSheet('registerPanel', true);
     renderRegisterPanel({ scanning: false });
   });
 }
 
+// Leser EXIF GPS/dato fra ORIGINALFILEN (må skje FØR compressImage — canvas-
+// re-enkoding i compressImage fjerner all EXIF-metadata). Kun relevant for
+// bilder valgt fra kamerarullen (etterregistrering) — et fersk kamerabilde
+// har allerede en pålitelig, live GPS-posisjon fra selve enheten, se
+// startRegistration. exifr.gps()/parse() feiler stille (returnerer
+// undefined/kaster) for bilder uten EXIF (f.eks. skjermdump, redigert bilde)
+// — helt normalt, appen faller da tilbake til manuelt valgt posisjon/dato.
+async function extractExif(file){
+  if (!window.exifr) return {};
+  let gps, dato;
+  try { gps = await window.exifr.gps(file); } catch (e) { /* ingen GPS-data i bildet */ }
+  try {
+    const parsed = await window.exifr.parse(file, ['DateTimeOriginal', 'CreateDate']);
+    dato = parsed && (parsed.DateTimeOriginal || parsed.CreateDate);
+  } catch (e) { /* ingen dato-data i bildet */ }
+  return { gps, dato };
+}
+
 async function onImageCaptured(e){
   const file = e.target.files && e.target.files[0];
   if (!file) return;
+  const fraGalleri = e.target.id === 'galleryInput';
+
+  if (fraGalleri) {
+    const { gps, dato } = await extractExif(file);
+    if (gps && Number.isFinite(gps.latitude) && Number.isFinite(gps.longitude)) {
+      pendingPosition = { lat: gps.latitude, lon: gps.longitude };
+      pendingPositionKilde = 'exif';
+    }
+    if (dato instanceof Date && !isNaN(dato)) pendingTimestamp = dato;
+  }
+
   pendingImageBlob = await compressImage(file);
   renderRegisterPanel({ scanning: true });
   toggleSheet('registerPanel', true);
@@ -290,14 +324,19 @@ function renderRegisterPanel(state){
     kiHtml = `<p class="hint">Ingen KI-forslag (proxy ikke konfigurert eller ingen treff). Velg art manuelt under.</p>`;
   }
 
+  const kildeLabel = { gps: '(GPS)', exif: '(fra bildet)', manuell: '(valgt manuelt)' }[pendingPositionKilde] || '';
   const posHtml = pendingPosition
-    ? `📍 ${pendingPosition.lat.toFixed(5)}, ${pendingPosition.lon.toFixed(5)} <button id="changePosBtn" class="linkBtn">endre</button>`
+    ? `📍 ${pendingPosition.lat.toFixed(5)}, ${pendingPosition.lon.toFixed(5)} <span class="hint">${kildeLabel}</span> <button id="changePosBtn" class="linkBtn">endre</button>`
     : `<button id="pickPosBtn" class="secondaryBtn">📍 Velg posisjon i kart</button>`;
+
+  const datoValue = toDatetimeLocalValue(pendingTimestamp || new Date());
 
   c.innerHTML = `
     <img src="${previewUrl}" class="previewImg" alt="">
     ${kiHtml}
     <div id="posStatus" class="posStatus">${posHtml}</div>
+    <label for="findDato">Tidspunkt</label>
+    <input id="findDato" type="datetime-local" value="${datoValue}">
     <label for="speciesSearch">Søk art manuelt</label>
     <input id="speciesSearch" type="text" placeholder="f.eks. havørn" autocomplete="off">
     <div id="speciesResults" class="speciesResults"></div>
@@ -309,6 +348,10 @@ function renderRegisterPanel(state){
 
   const pickBtn = el('pickPosBtn') || el('changePosBtn');
   if (pickBtn) pickBtn.addEventListener('click', pickPositionOnMap);
+  el('findDato').addEventListener('change', (ev) => {
+    const d = new Date(ev.target.value);
+    if (!isNaN(d)) pendingTimestamp = d;
+  });
 
   let valgtArt = (beste && autoVelg) ? { norsk: beste.art.norsk, latinsk: beste.art.latinsk, artstype: beste.artstype } : null;
   updateSaveButton();
@@ -354,7 +397,7 @@ async function saveFind(art){
 
   const entry = {
     art, artstype: art.artstype, lat: pos.lat, lon: pos.lon,
-    tidspunkt: new Date().toISOString(), imageBlob: pendingImageBlob,
+    tidspunkt: (pendingTimestamp || new Date()).toISOString(), imageBlob: pendingImageBlob,
     registrertAv: ''
   };
 
@@ -467,6 +510,14 @@ function escapeHtml(str){
   const div = document.createElement('div');
   div.textContent = str == null ? '' : String(str);
   return div.innerHTML;
+}
+
+// Formaterer en Date til verdien <input type="datetime-local"> forventer
+// ("YYYY-MM-DDTHH:mm"), i LOKAL tid (ikke UTC — new Date().toISOString()
+// ville vist feil klokkeslett i inputfeltet for de fleste norske brukere).
+function toDatetimeLocalValue(date){
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 })();
