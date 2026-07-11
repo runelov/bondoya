@@ -2,6 +2,10 @@ name = "bondoya-ki-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
+routes = [
+  { pattern = "api.bondoya.no", custom_domain = true }
+]
+
 # ANTHROPIC_API_KEY og APP_SHARED_SECRET settes IKKE her — sett dem med:
 #   wrangler secret put ANTHROPIC_API_KEY
 #   wrangler secret put APP_SHARED_SECRET
@@ -13,7 +17,7 @@ compatibility_date = "2026-01-01"
 
 [vars]
 ANTHROPIC_MODEL = "claude-sonnet-5"
-# Kommaseparert liste over opphav som får lov til å kalle proxyen (CORS).
-# Sett til den faktiske GitHub Pages-URL-en når den er kjent, f.eks.
-# "https://runelov.github.io"
-ALLOWED_ORIGIN = "*"
+# Opphavet som får lov til å kalle proxyen (CORS). Merk: koden bruker denne
+# verdien direkte i Access-Control-Allow-Origin, ikke som en faktisk
+# kommaseparert liste (til tross for navnet under) — kun ett opphav støttes.
+ALLOWED_ORIGIN = "https://bondoya.no"
