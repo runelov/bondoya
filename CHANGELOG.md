@@ -1,5 +1,24 @@
 # Endringslogg
 
+## 0.2.0 — MVP fullført
+Fase 1 (MVP) fra konsept.md ansett som fullført og i reell bruk. Alle
+kjernefunksjoner bygget, testet og bekreftet fungerende: kartdrevet
+registrering (kamera + kamerarull m/EXIF), KI-gjenkjenning, offline-kø,
+delt tilgang, PWA-installasjon, artsdetaljer m/rødlistestatus.
+
+To bevisste forbehold ved denne milepælen:
+- KI-motor-valget (Claude vision) ble avgjort via reell felttest (90 % treff
+  på hoggorm) i stedet for den opprinnelig planlagte side-om-side-
+  sammenligningen mot iNaturalist CV — en pragmatisk, felt-validert
+  beslutning, ikke en uavklart tråd.
+- Kun produkteier har testet appen så langt — reell flerbrukerbruk (de
+  øvrige 9-14 brukerne) gjenstår, og vil informere "kritisk
+  arkitekturvurdering"-fasen som allerede er planlagt etterpå.
+
+Neste steg: fase 2 (Artsobservasjoner-push) og fase 3
+(offentlig/admin/innlogget-lag, se konsept.md) — begge bevisst utsatt,
+ikke en del av v1.0.0 før de er bygget og validert.
+
 ## 0.1.5 — Rødlistestatus i artsdetaljer
 - Hentet ekte Norsk Rødliste 2021-status per art fra Artskart sitt
   taxon-API, lagt til som `rodlisteNorge`/`synligForPublic`-felt i
