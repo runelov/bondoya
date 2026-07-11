@@ -3,7 +3,7 @@
 // feilet). Hvert element inneholder bildet som en Blob (aldri base64 i minnet
 // lenger enn nødvendig) + resten av funn-metadataen.
 
-const DB_NAME = 'mittbondoya';
+const DB_NAME = 'bondoya';
 const STORE = 'queue';
 
 function openDb(){

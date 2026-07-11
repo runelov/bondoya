@@ -49,7 +49,7 @@ function initMap(){
   });
 
   let satellite = null;
-  const mapboxToken = localStorage.getItem('mittbondoya-mapbox-token');
+  const mapboxToken = localStorage.getItem('bondoya-mapbox-token');
   if (mapboxToken) {
     satellite = L.tileLayer(
       `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,

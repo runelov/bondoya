@@ -1,5 +1,18 @@
 # Endringslogg
 
+## 0.2.1 — Omdøpt til Bondøya
+Appen (og det tilhørende data-repoet) omdøpt fra "Mitt Bondøya"/`mittbondoya`
+til "Bondøya"/`bondoya`, i tråd med det nykjøpte domenet `bondoya.no`.
+Berører repo-navn (`bondoya`, `bondoya-db`), `localStorage`/IndexedDB-nøkler,
+PWA-manifest, KI-proxy Worker-navnet (`bondoya-ki-proxy`), og all
+UI-tekst/dokumentasjon. Tidligere oppføringer under er bevisst **ikke**
+skrevet om — de beskriver appen som den faktisk het/var strukturert på det
+tidspunktet.
+
+Merk: KI-proxyens nye Worker-navn krever en ny `wrangler deploy` for å tre i
+kraft; appens lagrede KI-proxy-URL (⚙️-panelet) må oppdateres manuelt til
+den nye URL-en etter deploy.
+
 ## 0.2.0 — MVP fullført
 Fase 1 (MVP) fra konsept.md ansett som fullført og i reell bruk. Alle
 kjernefunksjoner bygget, testet og bekreftet fungerende: kartdrevet

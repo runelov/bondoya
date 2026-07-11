@@ -1,4 +1,4 @@
-# Mitt Bondøya — KI-proxy
+# Bondøya — KI-proxy
 
 Liten Cloudflare Worker som skjuler `ANTHROPIC_API_KEY` og videresender
 feltbilder til Claude vision for artsgjenkjenning. Se `konsept.md` i
@@ -17,7 +17,7 @@ npx wrangler deploy
 ```
 
 Etter deploy får du en URL i stil med
-`https://mittbondoya-ki-proxy.<din-konto>.workers.dev` — lim denne inn i
+`https://bondoya-ki-proxy.<din-konto>.workers.dev` — lim denne inn i
 appens "Innstillinger"-panel (feltet "KI-proxy URL"), sammen med den
 SAMME verdien du satte som `APP_SHARED_SECRET` (feltet "KI-delt hemmelighet").
 Uten riktig delt hemmelighet svarer workeren 401 — det er meningen, se

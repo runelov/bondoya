@@ -1,5 +1,5 @@
 {
-  "name": "mittbondoya-ki-proxy",
+  "name": "bondoya-ki-proxy",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",

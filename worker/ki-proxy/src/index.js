@@ -1,7 +1,7 @@
 // worker/ki-proxy/src/index.js
 //
 // Minimal Cloudflare Worker som tar imot et feltbilde + en stedsforankret
-// artskandidatliste fra Mitt Bondøya-appen, kaller Claude vision, og
+// artskandidatliste fra Bondøya-appen, kaller Claude vision, og
 // returnerer strukturerte artsforslag. Eneste jobb: skjule ANTHROPIC_API_KEY
 // (aldri i klientkode) og gi raskt svar (1-3 sek) — se konsept.md for hvorfor
 // dette er ett unntak fra "alt er GitHub"-mønsteret.

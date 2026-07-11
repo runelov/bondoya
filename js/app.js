@@ -1,4 +1,4 @@
-// js/app.js — Mitt Bondøya
+// js/app.js — Bondøya
 (function(){
 "use strict";
 
@@ -79,10 +79,10 @@ async function refreshFromRepo(){
 
 // ---------- setup-panel ----------
 
-const MAPBOX_TOKEN_KEY = 'mittbondoya-mapbox-token';
+const MAPBOX_TOKEN_KEY = 'bondoya-mapbox-token';
 
 function wireSetupPanel(){
-  el('appVersion').textContent = `Mitt Bondøya v${APP_VERSION} (${APP_BUILD_DATE})`;
+  el('appVersion').textContent = `Bondøya v${APP_VERSION} (${APP_BUILD_DATE})`;
   const cfg = window.GhStore.getConfig();
   if (cfg) {
     el('ghOwner').value = cfg.owner;

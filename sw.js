@@ -2,7 +2,7 @@
 // (HTML/CSS/JS/manifest/ikoner) laster selv uten nett. All ekte data (GitHub
 // API, Mapbox-fliser, KI-proxy) går alltid rett til nettverket, uberørt.
 
-const CACHE_NAME = 'mittbondoya-shell-v1';
+const CACHE_NAME = 'bondoya-shell-v1';
 const SHELL_FILES = [
   './',
   './index.html',

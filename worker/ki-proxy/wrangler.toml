@@ -1,4 +1,4 @@
-name = "mittbondoya-ki-proxy"
+name = "bondoya-ki-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 

@@ -1,8 +1,8 @@
-# Mitt Bondøya (app)
+# Bondøya (app)
 
-Dette er den **offentlige** delen av Mitt Bondøya: rene statiske filer
+Dette er den **offentlige** delen av Bondøya: rene statiske filer
 (HTML/CSS/JS), ingen personlig innhold. Registrerte funn og bilder hentes fra
-et **privat** data-repo — se [mittbondoya-db](https://github.com/runelov/mittbondoya-db).
+et **privat** data-repo — se [bondoya-db](https://github.com/runelov/bondoya-db).
 
 Full konseptbeskrivelse og arkitekturvalg: se `konsept.md` i workspace-roten
 (ikke en del av dette repoet).
@@ -27,7 +27,7 @@ manifest.json, sw.js    PWA-installerbarhet
 1. Publiser dette repoet via **GitHub Pages** (Settings → Pages → Deploy from
    branch `main`, mappe `/root`).
 2. Sett opp det private data-repoet — se README i
-   [mittbondoya-db](https://github.com/runelov/mittbondoya-db).
+   [bondoya-db](https://github.com/runelov/bondoya-db).
 3. Deploy KI-proxyen — se `worker/ki-proxy/README.md` (krever egen
    Cloudflare- og Anthropic-konto/nøkkel, samt en `APP_SHARED_SECRET` du
    finner opp selv, f.eks. med `openssl rand -hex 32`).
@@ -43,7 +43,7 @@ manifest.json, sw.js    PWA-installerbarhet
 - **GitHub-tokenet** (til data-repoet) lagres kun i `localStorage` i
   nettleseren din — aldri i kode eller i dette repoet. Bruk et
   fine-grained token med utløpsdato (f.eks. 90 dager), begrenset til kun
-  `mittbondoya-db`.
+  `bondoya-db`.
 - **KI-delt hemmelighet** (`X-App-Secret`) hindrer at andre enn appen kan
   kalle KI-proxyen direkte og bruke opp Anthropic-kredittene dine — CORS
   alene stopper kun nettlesere, ikke curl/script mot en lekket Worker-URL.
@@ -58,5 +58,5 @@ manifest.json, sw.js    PWA-installerbarhet
   delte hemmeligheten settes kun som Cloudflare Worker-hemmeligheter,
   aldri i denne koden.
 - Vurder å skru på **secret scanning + push protection** (repo Settings →
-  Security → Code security) på både dette og `mittbondoya-db`-repoet, som
+  Security → Code security) på både dette og `bondoya-db`-repoet, som
   et sikkerhetsnett mot at noen ved et uhell committer en ekte nøkkel.

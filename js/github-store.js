@@ -1,5 +1,5 @@
 // js/github-store.js
-// Generisk "GitHub som database"-modul for Mitt Bondøya (portert fra FungiFinder).
+// Generisk "GitHub som database"-modul for Bondøya (portert fra FungiFinder).
 //
 // Leser og skriver vilkårlige JSON-filer og bilder i ett privat GitHub-repo via
 // GitHub sitt Contents API. Tokenet som konfigureres her ER appens tilgangs-
@@ -11,8 +11,8 @@
 // token begrenset til kun det private data-repoet, med "Contents: Read and
 // write" og "Actions: Read and write" (sistnevnte trengs for Artskart-hentingen).
 
-const GH_CONFIG_KEY = 'mittbondoya-gh-config';
-const LOCAL_FALLBACK_PREFIX = 'mittbondoya-local-';
+const GH_CONFIG_KEY = 'bondoya-gh-config';
+const LOCAL_FALLBACK_PREFIX = 'bondoya-local-';
 
 function getConfig(){
   try {
@@ -126,7 +126,7 @@ async function saveFile(path, dataObj, previousSha){
   const cfg = getConfig();
   if (!cfg) throw new Error('GitHub-synk er ikke konfigurert.');
   const body = {
-    message: `Mitt Bondøya: oppdater ${path} (${new Date().toISOString()})`,
+    message: `Bondøya: oppdater ${path} (${new Date().toISOString()})`,
     content: utf8ToBase64(JSON.stringify(dataObj, null, 2)),
     branch: cfg.branch || undefined
   };
@@ -145,7 +145,7 @@ async function saveImage(path, blob){
   if (!cfg) throw new Error('GitHub-synk er ikke konfigurert.');
   const base64 = await blobToBase64(blob);
   const body = {
-    message: `Mitt Bondøya: nytt bilde ${path}`,
+    message: `Bondøya: nytt bilde ${path}`,
     content: base64,
     branch: cfg.branch || undefined
   };
