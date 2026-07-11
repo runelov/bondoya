@@ -14,6 +14,9 @@ let pendingPosition = null; // {lat, lon}
 let pendingPositionKilde = null; // 'gps' | 'exif' | 'manuell' — vises i UI, se renderRegisterPanel
 let pendingTimestamp = null; // Date, forhåndsutfylt fra EXIF ved etterregistrering, alltid brukerjusterbar
 let pendingKiResultat = null;
+let pendingArt = null; // { norsk, latinsk, artstype } — løftet ut av renderRegisterPanel sin
+// lokale closure-variabel, ellers nullstilles et manuelt artsvalg hver gang
+// panelet re-rendres (f.eks. etter at posisjon velges i kart), se pickPositionOnMap.
 
 // ---------- oppstart ----------
 
@@ -189,6 +192,7 @@ function startRegistration(fraGalleri){
   pendingPositionKilde = null;
   pendingTimestamp = null;
   pendingKiResultat = null;
+  pendingArt = null;
   if (!fraGalleri && navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       pos => { pendingPosition = { lat: pos.coords.latitude, lon: pos.coords.longitude }; pendingPositionKilde = 'gps'; },
@@ -353,17 +357,27 @@ function renderRegisterPanel(state){
     if (!isNaN(d)) pendingTimestamp = d;
   });
 
-  let valgtArt = (beste && autoVelg) ? { norsk: beste.art.norsk, latinsk: beste.art.latinsk, artstype: beste.artstype } : null;
+  // pendingArt overlever re-rendering av panelet (f.eks. etter posisjonsvalg
+  // i kart, se pickPositionOnMap) — kun sett KI sitt auto-forslag som
+  // startverdi hvis brukeren ikke allerede har valgt noe selv.
+  if (!pendingArt && beste && autoVelg) {
+    pendingArt = { norsk: beste.art.norsk, latinsk: beste.art.latinsk, artstype: beste.artstype };
+  }
+  if (pendingArt) el('speciesSearch').value = pendingArt.norsk;
   updateSaveButton();
+  renderSelectedSpecies();
 
   function setValgt(art){
-    valgtArt = art;
-    el('selectedSpecies').innerHTML = art
-      ? `Valgt: <strong>${escapeHtml(art.norsk)}</strong> <em>${escapeHtml(art.latinsk||'')}</em>`
-      : '';
+    pendingArt = art;
+    renderSelectedSpecies();
     updateSaveButton();
   }
-  function updateSaveButton(){ el('saveFindBtn').disabled = !valgtArt || !pendingPosition; }
+  function renderSelectedSpecies(){
+    el('selectedSpecies').innerHTML = pendingArt
+      ? `Valgt: <strong>${escapeHtml(pendingArt.norsk)}</strong> <em>${escapeHtml(pendingArt.latinsk||'')}</em>`
+      : '';
+  }
+  function updateSaveButton(){ el('saveFindBtn').disabled = !pendingArt || !pendingPosition; }
 
   c.querySelectorAll('.candidateCard').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -401,9 +415,7 @@ function renderRegisterPanel(state){
   });
 
   el('cancelFindBtn').addEventListener('click', () => toggleSheet('registerPanel', false));
-  el('saveFindBtn').addEventListener('click', () => saveFind(valgtArt));
-
-  if (beste && autoVelg) setValgt({ norsk: beste.art.norsk, latinsk: beste.art.latinsk, artstype: beste.artstype });
+  el('saveFindBtn').addEventListener('click', () => saveFind(pendingArt));
 }
 
 async function saveFind(art){
