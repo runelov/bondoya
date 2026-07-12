@@ -142,6 +142,56 @@ async function settAdminInnstillinger(felter) {
   return data;
 }
 
+// Uinnlogget-vennlig, samme myke-sesjonssjekk-prinsipp som routes/sider.js —
+// backend avgjør selv hva som er synlig ut fra ev. gyldig sesjonscookie.
+async function hentSider() {
+  const res = await kall('/sider');
+  if (!res.ok) throw new Error(`Kunne ikke hente sider (${res.status}).`);
+  return res.json();
+}
+
+async function hentSide(slug) {
+  const res = await kall(`/sider/${slug}`);
+  if (!res.ok) throw new Error(`Fant ikke siden (${res.status}).`);
+  return res.json();
+}
+
+async function hentAdminSider() {
+  const res = await kall('/admin/sider');
+  if (!res.ok) throw new Error(`Kunne ikke hente sider (${res.status}).`);
+  return res.json();
+}
+
+async function opprettSide(felter) {
+  const res = await kall('/admin/sider', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(felter),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Kunne ikke opprette siden (${res.status}).`);
+  return data;
+}
+
+async function oppdaterSide(id, felter) {
+  const res = await kall(`/admin/sider/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(felter),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Kunne ikke oppdatere siden (${res.status}).`);
+  return data;
+}
+
+async function slettSide(id) {
+  const res = await kall(`/admin/sider/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Kunne ikke slette siden (${res.status}).`);
+  }
+}
+
 // Bildet vises via <img src="...">, ikke fetch+blob: sesjonscookien er
 // SameSite=Lax og bondoya.no→api.bondoya.no er samme site (ulikt opphav),
 // så den sendes automatisk med et vanlig <img>-kall — samme resonnement som
@@ -173,4 +223,10 @@ window.ApiClient = {
   slettBrukerPermanent,
   hentAdminInnstillinger,
   settAdminInnstillinger,
+  hentSider,
+  hentSide,
+  hentAdminSider,
+  opprettSide,
+  oppdaterSide,
+  slettSide,
 };

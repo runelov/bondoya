@@ -1,5 +1,29 @@
 # Endringslogg
 
+## 0.5.0 — Generisk sidesystem + personvernside
+Fase 3 sitt "generiske sidesystem" (konsept.md linje 194-197): admin kan nå
+selv opprette/redigere/slette et vilkårlig antall redaksjonelle sider fra
+adminpanelet, hver med egen synlighet (offentlig/kun innloggede) og status
+(kladd/publisert). Ny D1-tabell `sider` (migrasjon 0006), nye endepunkter
+`GET /sider` + `GET /sider/:slug` (offentlig, myk sesjonssjekk — filtrerer
+på synlighet+status server-side, 404 for skjulte/kladd-sider fremfor 401 for
+å ikke avsløre at de finnes), og `GET/POST/PATCH/DELETE /admin/sider(/:id)`.
+Sideinnhold lagres og vises som ren tekst (aldri HTML/markdown) — unngår
+XSS-risiko helt, samme `escapeHtml()`-mønster som resten av appen.
+
+Migrasjonen seeder én side, `/personvern` (offentlig, publisert): et
+førsteutkast som forklarer hva appen lagrer av personopplysninger (kortnavn
++ e-post), at e-post kun er admin-synlig, at bilder sendt til automatisk
+artsgjenkjenning går til Anthropics Claude, at Mapbox/Resend også behandler
+data i sine respektive roller, og hvordan man ber om sletting — skyldig
+siden Milestone A begynte å lagre ekte personopplysninger. Teksten er
+admin-redigerbar uten ny deploy, altså et startpunkt, ikke et bindende
+sluttdokument.
+
+Sidene nås via en ny "Sider"-lenkeliste nederst i kontopanelet (synlig
+uansett innloggingsstatus, listen filtreres av API-et) — ingen ny
+topBar-knapp.
+
 ## 0.4.2 — Admin-bryter: skru av offentlig funnvisning helt
 Ny global bryter i adminpanelet: "Offentlig funnvisning". Når PÅ (standard,
 uendret oppførsel): funn filtreres alltid som før (rødliste og selvvalgte)

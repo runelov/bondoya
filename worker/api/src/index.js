@@ -4,9 +4,13 @@ import { json } from './lib/json.js';
 import { beOmLenke, verifiser, loggUt } from './routes/auth.js';
 import { meg } from './routes/meg.js';
 import { listFunn, opprettFunn, oppdaterFunn, slettFunn, hentBilde } from './routes/funn.js';
-import { listBrukere, oppdaterBrukerStatus, slettBrukerPermanent, hentInnstillinger, oppdaterInnstillinger } from './routes/admin.js';
+import {
+  listBrukere, oppdaterBrukerStatus, slettBrukerPermanent, hentInnstillinger, oppdaterInnstillinger,
+  listAdminSider, opprettSide, oppdaterSide, slettSide,
+} from './routes/admin.js';
 import { listFunnOffentlig, hentOffentligInnstillinger } from './routes/offentlig.js';
 import { hentFlis } from './routes/tiles.js';
+import { listSider, hentSide } from './routes/sider.js';
 
 const router = createRouter();
 router.post('/auth/be-om-lenke', beOmLenke);
@@ -26,6 +30,12 @@ router.patch('/admin/brukere/:id', oppdaterBrukerStatus);
 router.delete('/admin/brukere/:id', slettBrukerPermanent);
 router.get('/admin/innstillinger', hentInnstillinger);
 router.patch('/admin/innstillinger', oppdaterInnstillinger);
+router.get('/sider', listSider);
+router.get('/sider/:slug', hentSide);
+router.get('/admin/sider', listAdminSider);
+router.post('/admin/sider', opprettSide);
+router.patch('/admin/sider/:id', oppdaterSide);
+router.delete('/admin/sider/:id', slettSide);
 
 export default {
   async fetch(request, env, ctx) {

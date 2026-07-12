@@ -47,6 +47,14 @@
     <p>Logget inn som <strong id="accountKortnavn"></strong></p>
     <button id="loggUtBtn" class="secondaryBtn">Logg ut</button>
   </div>
+  <!-- Sider (personvern osv.) — synlig uansett innloggingsstatus, listen filtreres server-side -->
+  <div id="sideLenker"></div>
+</div>
+
+<!-- Enkeltside (f.eks. personvern) -->
+<div id="sidePanel" class="sheet" hidden>
+  <div class="sheetHandle"></div>
+  <div id="sideContent"></div>
 </div>
 
 <!-- Admin: brukerliste + moderasjon (kun synlig/tilgjengelig for rolle==='admin', håndhevet server-side) -->
@@ -57,6 +65,31 @@
     <div><strong>Offentlig funnvisning</strong></div>
     <p class="hint">Når av: funn vises ikke i kartet eller funnlisten for besøkende uten innlogging, og det offentlige API-et returnerer ingen funn-data. Når på: funn filtreres alltid (rødliste og selvvalgte) som i dag.</p>
     <button id="funnSynligForPublicBtn" class="secondaryBtn"></button>
+  </div>
+  <h2>Admin — sider</h2>
+  <div id="sideListeAdmin" class="findList"></div>
+  <div id="sideSkjema" style="display:flex;flex-direction:column;gap:4px">
+    <label for="sideTittelInput">Tittel</label>
+    <input id="sideTittelInput" type="text">
+    <label for="sideSlugInput">Slug (i URL-en, kun a-z/0-9/bindestrek)</label>
+    <input id="sideSlugInput" type="text" autocomplete="off">
+    <label for="sideInnholdInput">Innhold</label>
+    <textarea id="sideInnholdInput" rows="8"></textarea>
+    <label for="sideSynlighetSelect">Synlighet</label>
+    <select id="sideSynlighetSelect">
+      <option value="offentlig">Offentlig (alle, også uinnlogget)</option>
+      <option value="palogget">Kun innloggede</option>
+    </select>
+    <label for="sideStatusSelect">Status</label>
+    <select id="sideStatusSelect">
+      <option value="kladd">Kladd (ikke synlig for noen ennå)</option>
+      <option value="publisert">Publisert</option>
+    </select>
+    <div class="sheetActions">
+      <button id="sideLagreBtn" class="primaryBtn">Lagre</button>
+      <button id="sideNyBtn" class="secondaryBtn">Ny side</button>
+    </div>
+    <p id="sideAdminNote" class="note"></p>
   </div>
   <h2>Admin — brukere</h2>
   <div id="brukerList" class="findList"></div>

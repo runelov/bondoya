@@ -2,6 +2,7 @@ import { json } from '../lib/json.js';
 import { corsHeaders } from '../lib/cors.js';
 import { requireAdmin } from '../lib/session.js';
 import { erFunnSynligForPublic, settFunnSynligForPublic } from '../lib/innstillinger.js';
+import { parseSideRad, validerSideFelter } from '../lib/sider.js';
 
 export async function listBrukere({ request, env }) {
   const cors = corsHeaders(env);
@@ -98,4 +99,93 @@ export async function oppdaterInnstillinger({ request, env }) {
 
   await settFunnSynligForPublic(env, body.funnSynligForPublic);
   return json({ funnSynligForPublic: body.funnSynligForPublic }, 200, cors);
+}
+
+export async function listAdminSider({ request, env }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  const { results } = await env.DB.prepare('SELECT * FROM sider ORDER BY tittel').all();
+  return json(results.map(parseSideRad), 200, cors);
+}
+
+export async function opprettSide({ request, env }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Ugyldig forespørsel.' }, 400, cors);
+  }
+
+  let felter;
+  try {
+    felter = validerSideFelter(body);
+  } catch (e) {
+    return json({ error: e.message }, 400, cors);
+  }
+
+  let rad;
+  try {
+    rad = await env.DB.prepare(
+      `INSERT INTO sider (slug, tittel, innhold, synlighet, status) VALUES (?, ?, ?, ?, ?) RETURNING *`
+    )
+      .bind(felter.slug, felter.tittel, felter.innhold, felter.synlighet, felter.status)
+      .first();
+  } catch (e) {
+    return json({ error: 'Slug er allerede i bruk.' }, 400, cors);
+  }
+
+  return json(parseSideRad(rad), 201, cors);
+}
+
+export async function oppdaterSide({ request, env, params }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Ugyldig forespørsel.' }, 400, cors);
+  }
+
+  let felter;
+  try {
+    felter = validerSideFelter(body);
+  } catch (e) {
+    return json({ error: e.message }, 400, cors);
+  }
+
+  let rad;
+  try {
+    rad = await env.DB.prepare(
+      `UPDATE sider SET slug = ?, tittel = ?, innhold = ?, synlighet = ?, status = ?, oppdatert = datetime('now')
+       WHERE id = ? RETURNING *`
+    )
+      .bind(felter.slug, felter.tittel, felter.innhold, felter.synlighet, felter.status, params.id)
+      .first();
+  } catch (e) {
+    return json({ error: 'Slug er allerede i bruk.' }, 400, cors);
+  }
+  if (!rad) return json({ error: 'Fant ikke siden.' }, 404, cors);
+
+  return json(parseSideRad(rad), 200, cors);
+}
+
+export async function slettSide({ request, env, params }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  const rad = await env.DB.prepare('SELECT id FROM sider WHERE id = ?').bind(params.id).first();
+  if (!rad) return json({ error: 'Fant ikke siden.' }, 404, cors);
+
+  await env.DB.prepare('DELETE FROM sider WHERE id = ?').bind(params.id).run();
+  return new Response(null, { status: 204, headers: cors });
 }

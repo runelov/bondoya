@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.4.2';
+const APP_VERSION = '0.5.0';
 const APP_BUILD_DATE = '2026-07-12';
 
 const el = id => document.getElementById(id);
@@ -159,7 +159,10 @@ async function refreshFromRepo(){
 // ---------- konto / innlogging ----------
 
 function wireAccountPanel(){
-  el('accountToggle').addEventListener('click', () => toggleSheet('accountPanel'));
+  el('accountToggle').addEventListener('click', async () => {
+    toggleSheet('accountPanel');
+    if (!el('accountPanel').hidden) await renderKontoSiderListe();
+  });
 
   el('loginSendBtn').addEventListener('click', async () => {
     const epost = el('loginEpost').value.trim();
@@ -219,6 +222,8 @@ function wireAdminPanel(){
     toggleSheet('adminPanel');
     if (!el('adminPanel').hidden) {
       await renderInnstillinger();
+      tomSideSkjema();
+      await renderAdminSider();
       await renderBrukerListe();
     }
   });
@@ -234,6 +239,31 @@ function wireAdminPanel(){
       showToast('Feil: ' + e.message);
     } finally {
       el('funnSynligForPublicBtn').disabled = false;
+    }
+  });
+
+  el('sideNyBtn').addEventListener('click', tomSideSkjema);
+
+  el('sideLagreBtn').addEventListener('click', async () => {
+    const felter = {
+      tittel: el('sideTittelInput').value.trim(),
+      slug: el('sideSlugInput').value.trim(),
+      innhold: el('sideInnholdInput').value.trim(),
+      synlighet: el('sideSynlighetSelect').value,
+      status: el('sideStatusSelect').value,
+    };
+    el('sideAdminNote').textContent = 'Lagrer …';
+    try {
+      if (redigerSideId) {
+        await window.ApiClient.oppdaterSide(redigerSideId, felter);
+      } else {
+        const opprettet = await window.ApiClient.opprettSide(felter);
+        redigerSideId = opprettet.id;
+      }
+      el('sideAdminNote').textContent = 'Lagret ✓';
+      await renderAdminSider();
+    } catch (e) {
+      el('sideAdminNote').textContent = 'Feil: ' + e.message;
     }
   });
 }
@@ -257,6 +287,112 @@ function oppdaterFunnSynlighetKnapp(){
   btn.textContent = adminInnstillingerCache.funnSynligForPublic
     ? 'Skru av offentlig funnvisning'
     : 'Skru på offentlig funnvisning';
+}
+
+// ---------- admin: sider ----------
+
+let redigerSideId = null; // null = "ny side"-skjema, ellers id-en som redigeres
+
+async function renderAdminSider(){
+  const container = el('sideListeAdmin');
+  container.innerHTML = '<p class="hint">Laster …</p>';
+  let sider;
+  try {
+    sider = await window.ApiClient.hentAdminSider();
+  } catch (e) {
+    container.innerHTML = `<p class="hint">Kunne ikke hente sider: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  container.innerHTML = sider.map((s) => `
+    <div class="findRow" style="display:flex;flex-direction:column;align-items:stretch;gap:6px">
+      <div><strong>${escapeHtml(s.tittel)}</strong> <span class="hint">${escapeHtml(s.status)} · ${escapeHtml(s.synlighet)}</span></div>
+      <div class="hint">/${escapeHtml(s.slug)}</div>
+      <div class="sheetActions">
+        <button class="secondaryBtn" data-handling="rediger" data-id="${s.id}">Rediger</button>
+        <button class="secondaryBtn" data-handling="slett" data-id="${s.id}">Slett</button>
+      </div>
+    </div>`).join('') || '<p class="hint">Ingen sider ennå.</p>';
+
+  container.querySelectorAll('[data-handling="rediger"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const side = sider.find((s) => s.id === parseInt(btn.dataset.id, 10));
+      if (side) fyllSideSkjema(side);
+    });
+  });
+  container.querySelectorAll('[data-handling="slett"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Slette denne siden? Kan ikke angres.')) return;
+      try {
+        await window.ApiClient.slettSide(btn.dataset.id);
+        if (redigerSideId === parseInt(btn.dataset.id, 10)) tomSideSkjema();
+        await renderAdminSider();
+      } catch (e) {
+        showToast('Feil: ' + e.message);
+      }
+    });
+  });
+}
+
+function fyllSideSkjema(side){
+  redigerSideId = side.id;
+  el('sideTittelInput').value = side.tittel;
+  el('sideSlugInput').value = side.slug;
+  el('sideInnholdInput').value = side.innhold;
+  el('sideSynlighetSelect').value = side.synlighet;
+  el('sideStatusSelect').value = side.status;
+  el('sideAdminNote').textContent = '';
+}
+
+function tomSideSkjema(){
+  redigerSideId = null;
+  el('sideTittelInput').value = '';
+  el('sideSlugInput').value = '';
+  el('sideInnholdInput').value = '';
+  el('sideSynlighetSelect').value = 'palogget';
+  el('sideStatusSelect').value = 'kladd';
+  el('sideAdminNote').textContent = '';
+}
+
+// ---------- sider (personvern osv., offentlig visning) ----------
+
+async function renderKontoSiderListe(){
+  const container = el('sideLenker');
+  let sider;
+  try {
+    sider = await window.ApiClient.hentSider();
+  } catch (e) {
+    return; // stille feil — sidelenker er ikke kritisk for appens kjernefunksjon
+  }
+  if (!sider.length) { container.innerHTML = ''; return; }
+
+  container.innerHTML = sider.map((s) =>
+    `<button class="linkBtn" data-slug="${escapeHtml(s.slug)}">${escapeHtml(s.tittel)}</button>`
+  ).join('');
+  container.querySelectorAll('[data-slug]').forEach((btn) => {
+    btn.addEventListener('click', () => apneSide(btn.dataset.slug));
+  });
+}
+
+async function apneSide(slug){
+  const container = el('sideContent');
+  container.innerHTML = '<p class="hint">Laster …</p>';
+  toggleSheet('sidePanel', true);
+  try {
+    const side = await window.ApiClient.hentSide(slug);
+    container.innerHTML = `<h2>${escapeHtml(side.tittel)}</h2>${renderSideInnhold(side.innhold)}`;
+  } catch (e) {
+    container.innerHTML = '<p class="hint">Fant ikke siden.</p>';
+  }
+}
+
+// Ren tekst, aldri HTML/markdown — escapeHtml() (samme funksjon som resten
+// av appen bruker) hindrer XSS via lagret sideinnhold, tomme linjer blir nye
+// avsnitt, enkle linjeskift blir <br>.
+function renderSideInnhold(innhold){
+  return innhold.split(/\n{2,}/).map((avsnitt) =>
+    `<p>${escapeHtml(avsnitt).replace(/\n/g, '<br>')}</p>`
+  ).join('');
 }
 
 async function renderBrukerListe(){
@@ -886,7 +1022,7 @@ function rodlisteBadge(kode){
 function toggleSheet(id, force){
   const sheet = el(id);
   const show = force !== undefined ? force : sheet.hidden;
-  ['setupPanel','listPanel','detailPanel','registerPanel','accountPanel','adminPanel'].forEach(other => {
+  ['setupPanel','listPanel','detailPanel','registerPanel','accountPanel','adminPanel','sidePanel'].forEach(other => {
     if (other !== id) el(other).hidden = true;
   });
   sheet.hidden = !show;
