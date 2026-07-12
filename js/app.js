@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.4.2';
 const APP_BUILD_DATE = '2026-07-12';
 
 const el = id => document.getElementById(id);
@@ -14,6 +14,8 @@ let artskartCache = []; // [{art, taxonId, lat, lon, dato}, ...] fra data/artska
 let activeFilter = 'alle';
 let activeVisning = 'alle'; // 'alle' | 'mine' — se wireListPanel
 let brukerCache = null; // {epost, kortnavn, rolle} eller null — satt av sjekkSesjon()
+let offentligFunnSynlig = null; // null = ukjent enda (fail-closed inntil kjent), ellers boolean — se refreshFromRepo
+let adminInnstillingerCache = null; // {funnSynligForPublic} — kun lastet/relevant i adminPanel
 let pendingImageBlob = null;
 let pendingPosition = null; // {lat, lon}
 let pendingPositionKilde = null; // 'gps' | 'exif' | 'manuell' — vises i UI, se renderRegisterPanel
@@ -106,10 +108,27 @@ async function refreshFromRepo(){
   if (!brukerCache) {
     // Offentlig (uinnlogget) lag: live, redusert visning fra bondoya-api,
     // se konsept.md "Offentlig lag" og worker/api/src/routes/offentlig.js.
+    // Admin kan skru funnvisning for besøkende helt av (adminPanel) — sjekk
+    // det lette flagg-endepunktet FØR vi i det hele tatt spør om funn-data,
+    // slik at vi ikke henter rådata når visning er avslått. Selve sperren
+    // håndheves uansett server-side (listFunnOffentlig), dette er bare for å
+    // unngå unødig nettverkskall og for å style knapp/kart riktig.
     try {
-      funnCache = await window.ApiClient.hentOffentligeFunn();
+      const innstillinger = await window.ApiClient.hentOffentligInnstillinger();
+      offentligFunnSynlig = !!innstillinger.funnSynligForPublic;
     } catch (e) {
-      showToast('Kunne ikke hente funn: ' + e.message);
+      offentligFunnSynlig = false; // fail-closed ved feil, se lib/innstillinger.js-resonnementet
+    }
+    renderAccountPanel(); // oppdaterer listToggle-synlighet nå som vi vet
+
+    if (offentligFunnSynlig) {
+      try {
+        funnCache = await window.ApiClient.hentOffentligeFunn();
+      } catch (e) {
+        showToast('Kunne ikke hente funn: ' + e.message);
+      }
+    } else {
+      funnCache = [];
     }
     renderFindsPaKart();
     renderList();
@@ -184,6 +203,12 @@ function renderAccountPanel(){
   el('fabRegister').hidden = !brukerCache;
   el('fabGallery').hidden = !brukerCache;
   el('setupToggle').hidden = !brukerCache;
+  // Funnliste-knapp: alltid synlig for innloggede (de ser alltid alle egne
+  // funn), men skjult for besøkende når admin har skrudd av offentlig
+  // funnvisning (eller mens vi ennå ikke har fått bekreftet flagget —
+  // fail-closed, se refreshFromRepo). Kosmetisk skjuling som resten av
+  // panelet her; faktisk håndhevelse skjer server-side i listFunnOffentlig.
+  el('listToggle').hidden = !brukerCache && !offentligFunnSynlig;
   if (mapCtx) mapCtx.settInnloggingsstatus(!!brukerCache);
 }
 
@@ -192,8 +217,46 @@ function renderAccountPanel(){
 function wireAdminPanel(){
   el('adminToggle').addEventListener('click', async () => {
     toggleSheet('adminPanel');
-    if (!el('adminPanel').hidden) await renderBrukerListe();
+    if (!el('adminPanel').hidden) {
+      await renderInnstillinger();
+      await renderBrukerListe();
+    }
   });
+
+  el('funnSynligForPublicBtn').addEventListener('click', async () => {
+    const nyVerdi = !adminInnstillingerCache.funnSynligForPublic;
+    el('funnSynligForPublicBtn').disabled = true;
+    try {
+      adminInnstillingerCache = await window.ApiClient.settAdminInnstillinger({ funnSynligForPublic: nyVerdi });
+      oppdaterFunnSynlighetKnapp();
+      showToast(nyVerdi ? 'Offentlig funnvisning er nå PÅ.' : 'Offentlig funnvisning er nå AV.');
+    } catch (e) {
+      showToast('Feil: ' + e.message);
+    } finally {
+      el('funnSynligForPublicBtn').disabled = false;
+    }
+  });
+}
+
+async function renderInnstillinger(){
+  const btn = el('funnSynligForPublicBtn');
+  btn.disabled = true;
+  btn.textContent = 'Laster …';
+  try {
+    adminInnstillingerCache = await window.ApiClient.hentAdminInnstillinger();
+  } catch (e) {
+    btn.textContent = 'Kunne ikke laste innstilling';
+    return;
+  }
+  oppdaterFunnSynlighetKnapp();
+  btn.disabled = false;
+}
+
+function oppdaterFunnSynlighetKnapp(){
+  const btn = el('funnSynligForPublicBtn');
+  btn.textContent = adminInnstillingerCache.funnSynligForPublic
+    ? 'Skru av offentlig funnvisning'
+    : 'Skru på offentlig funnvisning';
 }
 
 async function renderBrukerListe(){

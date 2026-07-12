@@ -2,6 +2,7 @@ import { json } from '../lib/json.js';
 import { corsHeaders } from '../lib/cors.js';
 import { requireSession } from '../lib/session.js';
 import { parseFunnRad, hentFunnRad, validerFunnFelter, lastOppBildeHvisTilstede } from '../lib/funn.js';
+import { erFunnSynligForPublic } from '../lib/innstillinger.js';
 
 export async function listFunn({ request, env }) {
   const cors = corsHeaders(env);
@@ -136,8 +137,11 @@ export async function hentBilde({ request, env, params }) {
   if (!rad || !rad.bilde_r2_key) return json({ error: 'Fant ikke bilde.' }, 404, cors);
 
   // Bilder til offentlig-synlige funn serveres uinnlogget (samme skille som
-  // listFunn/listFunnOffentlig) — alt annet krever sesjon som før.
-  if (!rad.synlig_for_public) {
+  // listFunn/listFunnOffentlig) — men kun når den globale admin-bryteren for
+  // offentlig funnvisning faktisk er PÅ (se lib/innstillinger.js). Alt annet
+  // krever sesjon som før.
+  const offentligPa = rad.synlig_for_public && (await erFunnSynligForPublic(env));
+  if (!offentligPa) {
     const bruker = await requireSession(request, env);
     if (!bruker) return json({ error: 'Ikke innlogget.' }, 401, cors);
   }

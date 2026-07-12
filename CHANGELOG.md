@@ -1,5 +1,18 @@
 # Endringslogg
 
+## 0.4.2 — Admin-bryter: skru av offentlig funnvisning helt
+Ny global bryter i adminpanelet: "Offentlig funnvisning". Når PÅ (standard,
+uendret oppførsel): funn filtreres alltid som før (rødliste og selvvalgte)
+og vises i det offentlige laget. Når AV: funn vises verken i kartet eller
+funnlisten for besøkende uten innlogging, funnliste-knappen skjules helt,
+og selve API-et nekter å utlevere rådata — `GET /funn/offentlig` returnerer
+tomt array og `GET /funn/bilde/:id` for et ellers offentlig-synlig funn
+krever nå også sesjon når bryteren er av. Håndhevelsen skjer server-side
+(`worker/api/src/lib/innstillinger.js`, ny `innstillinger`-tabell i D1,
+migrasjon 0005) — ikke bare ved at frontend lar være å spørre om dataene.
+Innloggede brukere (vanlige og admin) påvirkes ikke; de ser alltid alle
+funn som før.
+
 ## 0.4.1 — Sikkerhetsfiks: fail-closed artssynlighet
 `/security-review` av 0.4.0 avdekket at manglende `taxonId` (KI-auto-valgte
 og fritekst-registrerte funn — den vanligste registreringsveien i appen)

@@ -50,6 +50,15 @@ async function hentOffentligeFunn() {
   return res.json();
 }
 
+// Ett boolsk flagg (ingen funn-data) — brukes til å avgjøre om
+// funnliste-knapp/kartmarkører skal vises for uinnloggede, FØR appen i det
+// hele tatt spør om selve funn-dataene.
+async function hentOffentligInnstillinger() {
+  const res = await kall('/offentlig/innstillinger');
+  if (!res.ok) throw new Error(`Kunne ikke hente innstillinger (${res.status}).`);
+  return res.json();
+}
+
 // entry: samme felt-shape som appen bruker internt i dag ({art, artstype,
 // lat, lon, tidspunkt, imageBlob, kiKonfidens?, kiAlternativer?}) — bygger
 // om til multipart/form-data-feltnavnene Workeren forventer.
@@ -115,6 +124,24 @@ async function slettBrukerPermanent(id) {
   return data;
 }
 
+async function hentAdminInnstillinger() {
+  const res = await kall('/admin/innstillinger');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Kunne ikke hente innstillinger (${res.status}).`);
+  return data;
+}
+
+async function settAdminInnstillinger(felter) {
+  const res = await kall('/admin/innstillinger', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(felter),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Kunne ikke oppdatere innstillinger (${res.status}).`);
+  return data;
+}
+
 // Bildet vises via <img src="...">, ikke fetch+blob: sesjonscookien er
 // SameSite=Lax og bondoya.no→api.bondoya.no er samme site (ulikt opphav),
 // så den sendes automatisk med et vanlig <img>-kall — samme resonnement som
@@ -135,6 +162,7 @@ window.ApiClient = {
   loggUt,
   hentFunn,
   hentOffentligeFunn,
+  hentOffentligInnstillinger,
   opprettFunn,
   oppdaterFunn,
   slettFunn,
@@ -143,4 +171,6 @@ window.ApiClient = {
   hentBrukere,
   settBrukerStatus,
   slettBrukerPermanent,
+  hentAdminInnstillinger,
+  settAdminInnstillinger,
 };

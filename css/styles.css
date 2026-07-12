@@ -11,6 +11,12 @@
 }
 
 *{ box-sizing: border-box; }
+/* .iconBtn/.fab/.fabSecondary sette egne display-regler uten unntak for
+   [hidden] — author-CSS slår alltid nettleserens UA-regel for [hidden]
+   ved lik spesifisitet, så uten dette forblir elementer synlige selv når
+   JS setter .hidden = true (rammet adminToggle/fabRegister/fabGallery/
+   setupToggle/listToggle likt, ikke noe nytt for denne endringen). */
+[hidden]{ display: none !important; }
 html, body{ height: 100%; margin: 0; }
 body{
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;

@@ -4,8 +4,8 @@ import { json } from './lib/json.js';
 import { beOmLenke, verifiser, loggUt } from './routes/auth.js';
 import { meg } from './routes/meg.js';
 import { listFunn, opprettFunn, oppdaterFunn, slettFunn, hentBilde } from './routes/funn.js';
-import { listBrukere, oppdaterBrukerStatus, slettBrukerPermanent } from './routes/admin.js';
-import { listFunnOffentlig } from './routes/offentlig.js';
+import { listBrukere, oppdaterBrukerStatus, slettBrukerPermanent, hentInnstillinger, oppdaterInnstillinger } from './routes/admin.js';
+import { listFunnOffentlig, hentOffentligInnstillinger } from './routes/offentlig.js';
 import { hentFlis } from './routes/tiles.js';
 
 const router = createRouter();
@@ -19,10 +19,13 @@ router.patch('/funn/:id', oppdaterFunn);
 router.delete('/funn/:id', slettFunn);
 router.get('/funn/bilde/:id', hentBilde);
 router.get('/funn/offentlig', listFunnOffentlig);
+router.get('/offentlig/innstillinger', hentOffentligInnstillinger);
 router.get('/tiles/:z/:x/:y', hentFlis);
 router.get('/admin/brukere', listBrukere);
 router.patch('/admin/brukere/:id', oppdaterBrukerStatus);
 router.delete('/admin/brukere/:id', slettBrukerPermanent);
+router.get('/admin/innstillinger', hentInnstillinger);
+router.patch('/admin/innstillinger', oppdaterInnstillinger);
 
 export default {
   async fetch(request, env, ctx) {

@@ -1,6 +1,7 @@
 import { json } from '../lib/json.js';
 import { corsHeaders } from '../lib/cors.js';
 import { requireAdmin } from '../lib/session.js';
+import { erFunnSynligForPublic, settFunnSynligForPublic } from '../lib/innstillinger.js';
 
 export async function listBrukere({ request, env }) {
   const cors = corsHeaders(env);
@@ -70,4 +71,31 @@ export async function slettBrukerPermanent({ request, env, params }) {
   await env.DB.prepare('DELETE FROM sesjoner WHERE bruker_id = ?').bind(id).run();
 
   return json({ ok: true }, 200, cors);
+}
+
+export async function hentInnstillinger({ request, env }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  return json({ funnSynligForPublic: await erFunnSynligForPublic(env) }, 200, cors);
+}
+
+export async function oppdaterInnstillinger({ request, env }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Ugyldig forespørsel.' }, 400, cors);
+  }
+  if (typeof body.funnSynligForPublic !== 'boolean') {
+    return json({ error: 'Ugyldig verdi for funnSynligForPublic.' }, 400, cors);
+  }
+
+  await settFunnSynligForPublic(env, body.funnSynligForPublic);
+  return json({ funnSynligForPublic: body.funnSynligForPublic }, 200, cors);
 }
