@@ -1,5 +1,26 @@
 # Endringslogg
 
+## 0.3.0 — Fase 3: innlogging, funn-CRUD, admin-tilgang
+Ny arkitektur bygget på Cloudflare Worker (`worker/api/`) + D1 + R2,
+erstatter "GitHub som backend" for selve funn-registreringen — se
+`konsept.md` for full begrunnelse. Bygget og sikkerhetsgjennomgått
+(`/security-review`, ingen funn) i tre milestoner samme dag:
+
+- **Milestone A**: passordløs innlogging (magic-link på e-post), D1-baserte
+  sesjoner (ikke JWT — admin-deaktivering slår inn umiddelbart), Turnstile +
+  rate-limiting på innloggingssiden.
+- **Milestone B**: funn (artsobservasjoner) og bilder flyttet til D1/R2 med
+  ekte eierskap — brukere kan nå redigere/slette sine egne funn, "Mine
+  funn"/"Alle funn"-veksling i listen.
+- **Milestone C (kjerne)**: admin-rolle håndheves server-side. Admin kan
+  slette hvilket som helst funn (moderasjon), deaktivere en bruker (dreper
+  aktive sesjoner umiddelbart), eller permanent slette en bruker (fjerner
+  e-post, beholder kortnavnet på eksisterende funn).
+
+Ikke bygget ennå (bevisst avgrenset omfang): invitasjonslenker (nye
+brukere legges fortsatt til manuelt), Mapbox-flis-proxy, offentlig
+ikke-innlogget lag, rødliste-filtrering, admin-dashboard.
+
 ## 0.2.1 — Omdøpt til Bondøya
 Appen (og det tilhørende data-repoet) omdøpt fra "Mitt Bondøya"/`mittbondoya`
 til "Bondøya"/`bondoya`, i tråd med det nykjøpte domenet `bondoya.no`.
