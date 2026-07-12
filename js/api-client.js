@@ -267,6 +267,16 @@ async function hentAdminDashboard() {
   return res.json();
 }
 
+// Live søk mot Artsdatabanken (via Workerens /arter/sok-proxy), se
+// worker/api/src/routes/arter.js. Kastes bevisst ikke ved feil — brukes fra
+// en debouncet input-handler der en enkelt mislykket forespørsel ikke bør
+// avbryte resten av registreringsflyten.
+async function sokArter(term) {
+  const res = await kall(`/arter/sok?q=${encodeURIComponent(term)}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // Bildet vises via <img src="...">, ikke fetch+blob: sesjonscookien er
 // SameSite=Lax og bondoya.no→api.bondoya.no er samme site (ulikt opphav),
 // så den sendes automatisk med et vanlig <img>-kall — samme resonnement som
@@ -313,4 +323,5 @@ window.ApiClient = {
   skjulArt,
   visArtIgjen,
   hentAdminDashboard,
+  sokArter,
 };

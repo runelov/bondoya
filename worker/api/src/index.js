@@ -15,6 +15,7 @@ import { listFunnOffentlig, hentOffentligInnstillinger } from './routes/offentli
 import { hentFlis } from './routes/tiles.js';
 import { listSider, hentSide } from './routes/sider.js';
 import { sjekkInvitasjon, registrerMedInvitasjon } from './routes/invitasjoner.js';
+import { sokArter } from './routes/arter.js';
 
 const router = createRouter();
 router.post('/auth/be-om-lenke', beOmLenke);
@@ -29,6 +30,7 @@ router.get('/funn/bilde/:id', hentBilde);
 router.get('/funn/offentlig', listFunnOffentlig);
 router.get('/offentlig/innstillinger', hentOffentligInnstillinger);
 router.get('/tiles/:z/:x/:y', hentFlis);
+router.get('/arter/sok', sokArter);
 router.get('/admin/brukere', listBrukere);
 router.patch('/admin/brukere/:id', oppdaterBrukerStatus);
 router.delete('/admin/brukere/:id', slettBrukerPermanent);

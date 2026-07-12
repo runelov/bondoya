@@ -61,10 +61,22 @@ function initMap(){
   const baseLayers = { 'Kartverket (terreng)': topo };
   // bottomleft: Leaflets standard topright/bottomright kolliderer med appens
   // egne ⚙️/📋-knapper (topBar) og GPS/zoom-knappene — bottomleft er ledig.
-  const layersControl = L.control.layers(baseLayers, {}, { position: 'bottomleft' }).addTo(map);
+  // Ikke lagt til kartet her — offentlige besøkende har uansett kun ett
+  // kartlag (Kartverket), så en lagvelger med ett valg er bare støy for dem.
+  // Legges til/fjernes i settInnloggingsstatus i stedet, sammen med
+  // satellittlaget.
+  const layersControl = L.control.layers(baseLayers, {}, { position: 'bottomleft' });
 
   let satelliteLagtTil = false;
+  let layersControlLagtTil = false;
   function settInnloggingsstatus(innlogget){
+    if (innlogget && !layersControlLagtTil) {
+      layersControl.addTo(map);
+      layersControlLagtTil = true;
+    } else if (!innlogget && layersControlLagtTil) {
+      layersControl.remove();
+      layersControlLagtTil = false;
+    }
     if (innlogget && !satelliteLagtTil) {
       layersControl.addBaseLayer(satellite, 'Mapbox (satellitt)');
       satelliteLagtTil = true;

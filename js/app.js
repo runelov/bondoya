@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.8.1';
+const APP_VERSION = '0.9.0';
 const APP_BUILD_DATE = '2026-07-12';
 
 const el = id => document.getElementById(id);
@@ -13,10 +13,17 @@ let speciesCache = [];
 let artskartCache = []; // [{art, taxonId, lat, lon, dato}, ...] fra data/artskart-bondoya.json
 let activeFilter = 'alle';
 let activeVisning = 'alle'; // 'alle' | 'mine' — se wireListPanel
+let activeSort = 'nyeste'; // se SORTERINGER/wireListPanel
+let activeGroup = 'ingen'; // se GRUPPERINGER/wireListPanel
+let kunUsikre = false; // admin-only filter, se wireListPanel
 let brukerCache = null; // {epost, kortnavn, rolle} eller null — satt av sjekkSesjon()
 let offentligFunnSynlig = null; // null = ukjent enda (fail-closed inntil kjent), ellers boolean — se refreshFromRepo
 let adminInnstillingerCache = null; // {funnSynligForPublic} — kun lastet/relevant i adminPanel
 let pendingImageBlob = null;
+// Beskåret utsnitt sendt til KI i stedet for pendingImageBlob (se
+// renderRegisterPanel sin cropping-state) — kun et gjenkjenningshjelpemiddel,
+// ALDRI det som lagres på funnet (pendingImageBlob forblir uendret).
+let pendingKiCropBlob = null;
 let pendingPosition = null; // {lat, lon}
 let pendingPositionKilde = null; // 'gps' | 'exif' | 'manuell' — vises i UI, se renderRegisterPanel
 let pendingTimestamp = null; // Date, forhåndsutfylt fra EXIF ved etterregistrering, alltid brukerjusterbar
@@ -210,7 +217,10 @@ function renderAccountPanel(){
   // skjer server-side (requireSession på POST /funn og GET /tiles/...).
   el('fabRegister').hidden = !brukerCache;
   el('fabGallery').hidden = !brukerCache;
-  el('setupToggle').hidden = !brukerCache;
+  // ⚙️-panelet er levning fra MVP-ens GitHub-token-oppsett (fortsatt brukt
+  // read-only til å hente artskart-bondoya.json) — admin-only, samme
+  // kosmetisk-skjuling-prinsipp som adminToggle over.
+  el('setupToggle').hidden = !brukerCache || brukerCache.rolle !== 'admin';
   // Funnliste-knapp: alltid synlig for innloggede (de ser alltid alle egne
   // funn), men skjult for besøkende når admin har skrudd av offentlig
   // funnvisning (eller mens vi ennå ikke har fått bekreftet flagget —
@@ -905,13 +915,23 @@ async function onImageCaptured(e){
   }
 
   pendingImageBlob = await compressImage(file);
-  renderRegisterPanel({ scanning: true });
+  pendingKiCropBlob = null;
+  // Bekreft/beskjær-steg før KI kjører — se renderRegisterPanel sin
+  // cropping-state og kjorKiGjenkjenning() under.
+  renderRegisterPanel({ cropping: true });
   toggleSheet('registerPanel', true);
+}
 
+// pendingKiCropBlob (satt av beskjæringssteget i renderRegisterPanel, hvis
+// brukeren valgte å beskjære) sendes til KI i stedet for pendingImageBlob
+// når den finnes — det lagrede funn-bildet forblir alltid det ubeskårne
+// pendingImageBlob, uavhengig av hva KI faktisk analyserte.
+async function kjorKiGjenkjenning(){
+  renderRegisterPanel({ scanning: true });
   if (window.KiClient.isConfigured()) {
     try {
       const hint = buildSpeciesHintList();
-      pendingKiResultat = await window.KiClient.gjenkjenn(pendingImageBlob, hint);
+      pendingKiResultat = await window.KiClient.gjenkjenn(pendingKiCropBlob || pendingImageBlob, hint);
       console.debug('KI-svar', pendingKiResultat);
     } catch (err) {
       console.warn('KI-gjenkjenning feilet', err);
@@ -947,9 +967,55 @@ function compressImage(file){
   });
 }
 
+// Beskjærer et allerede lastet <img>-element til et rektangel i bildets egne
+// naturlige pikselkoordinater (fra renderRegisterPanel sin beskjæringssteg),
+// samme kvalitetskonvensjon som compressImage. Kun brukt til KI-analyse —
+// erstatter ALDRI pendingImageBlob (det lagrede funn-bildet), se
+// kjorKiGjenkjenning().
+function cropToBlob(img, rect){
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(rect.width));
+    canvas.height = Math.max(1, Math.round(rect.height));
+    canvas.getContext('2d').drawImage(
+      img, rect.x, rect.y, rect.width, rect.height,
+      0, 0, canvas.width, canvas.height
+    );
+    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+  });
+}
+
+// Vises når KI er usikker/ikke finner noe — ren tekst, ingen KI-proxy-
+// avhengighet (proxyen returnerer i dag ingen kvalitets-/usikkerhetssignal).
+const FOTOTIPS_HTML = `
+  <div class="fototips">
+    <strong>Tips for et lettere gjenkjennelig bilde:</strong>
+    <ul>
+      <li>Kom så nært som mulig uten å forstyrre dyret/planten</li>
+      <li>Sørg for godt lys, unngå sterk motlys</li>
+      <li>Fokuser på selve arten, ikke bakgrunnen</li>
+      <li>Hold kameraet i ro</li>
+    </ul>
+  </div>`;
+
 function renderRegisterPanel(state){
   const c = el('registerContent');
   const previewUrl = pendingImageBlob ? URL.createObjectURL(pendingImageBlob) : null;
+
+  if (state.cropping) {
+    c.innerHTML = `
+      <div class="cropWrap" id="cropWrap">
+        <img src="${previewUrl}" class="cropImg" id="cropImg" alt="">
+        <div class="cropBox" id="cropBox" hidden></div>
+      </div>
+      <p class="hint">Dra over bildet for å velge utsnittet KI skal analysere (valgfritt) — hele bildet lagres uansett på funnet.</p>
+      <div class="sheetActions">
+        <button id="brukUtsnittBtn" class="primaryBtn" disabled>Bruk utsnitt</button>
+        <button id="analyserHeleBtn" class="secondaryBtn">Analyser hele bildet</button>
+      </div>`;
+    wireCropInteraction();
+    return;
+  }
 
   if (state.scanning) {
     c.innerHTML = `
@@ -982,9 +1048,10 @@ function renderRegisterPanel(state){
             <strong>${escapeHtml(a.norsk)}</strong>
             <span class="konfidensBadge">${Math.round((a.konfidens||0)*100)} %</span>
           </button>`).join('')}
-      </div>`;
+      </div>
+      ${FOTOTIPS_HTML}`;
   } else {
-    kiHtml = `<p class="hint">Fant ikke arten automatisk. Velg art manuelt under.</p>`;
+    kiHtml = `<p class="hint">Fant ikke arten automatisk. Velg art manuelt under.</p>${FOTOTIPS_HTML}`;
   }
 
   const kildeLabel = { gps: '(GPS)', exif: '(fra bildet)', manuell: '(valgt manuelt)' }[pendingPositionKilde] || '';
@@ -1045,36 +1112,131 @@ function renderRegisterPanel(state){
     });
   });
 
+  // Lokale (kuraterte 17) treff vises instant; bredere treff hentes live fra
+  // Artsdatabanken via Workerens /arter/sok-proxy (se worker/api/src/routes/
+  // arter.js) — erstatter den gamle "bruk som ny art"-fritekstknappen.
+  // Uventede funn (som en elg som har svømt ut til øya) dekkes nå av det
+  // brede søket i stedet for fri tekst, siden Artsdatabanken sin taxonomi
+  // dekker praktisk talt alle norske arter.
+  function renderSpeciesResults(lokale, eksterne){
+    const alle = [...lokale, ...eksterne];
+    el('speciesResults').innerHTML =
+      lokale.map((s, i) => `<button class="speciesResult" data-i="${i}">${escapeHtml(s.norsk)} <em>${escapeHtml(s.latinsk)}</em></button>`).join('') +
+      (eksterne.length ? '<p class="hint speciesResultsHint">Flere treff</p>' : '') +
+      eksterne.map((s, i) => `<button class="speciesResult" data-i="${lokale.length + i}">${escapeHtml(s.norsk)} <em>${escapeHtml(s.latinsk)}</em></button>`).join('');
+
+    el('speciesResults').querySelectorAll('.speciesResult').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const s = alle[Number(btn.dataset.i)];
+        setValgt({ norsk: s.norsk, latinsk: s.latinsk, artstype: s.artstype });
+        el('speciesResults').innerHTML = '';
+        el('speciesSearch').value = s.norsk;
+      });
+    });
+  }
+
+  let sokTimer = null;
   el('speciesSearch').addEventListener('input', (ev) => {
     const rawTerm = ev.target.value.trim();
     const term = rawTerm.toLowerCase();
-    const results = term.length < 2 ? [] : speciesCache.filter(s =>
+    const lokaleTreff = term.length < 2 ? [] : speciesCache.filter(s =>
       s.norsk.toLowerCase().includes(term) || s.latinsk.toLowerCase().includes(term)
     ).slice(0, 6);
-    // Artslisten er en kuratert forventning, ikke en fasit — uventede funn
-    // (som en elg som har svømt ut til øya) skal fortsatt kunne registreres.
-    // Tilbyr derfor alltid "bruk som ny art" når søket ikke er et eksakt
-    // treff, i tillegg til eventuelle nære forslag.
-    const eksaktTreff = speciesCache.some(s => s.norsk.toLowerCase() === term);
-    const visFritekst = term.length >= 2 && !eksaktTreff;
+    renderSpeciesResults(lokaleTreff, []);
 
-    el('speciesResults').innerHTML =
-      results.map((s, i) => `<button class="speciesResult" data-i="${i}">${escapeHtml(s.norsk)} <em>${escapeHtml(s.latinsk)}</em></button>`).join('') +
-      (visFritekst ? `<button id="freeTextSpeciesBtn" class="speciesResult speciesResultFritekst">➕ Bruk «${escapeHtml(rawTerm)}» (ikke i listen)</button>` : '');
-
-    el('speciesResults').querySelectorAll('.speciesResult:not(.speciesResultFritekst)').forEach((btn, i) => {
-      btn.addEventListener('click', () => { setValgt(results[i]); el('speciesResults').innerHTML=''; el('speciesSearch').value = results[i].norsk; });
-    });
-    if (visFritekst) {
-      el('freeTextSpeciesBtn').addEventListener('click', () => {
-        setValgt({ norsk: rawTerm, latinsk: '', artstype: 'annet' });
-        el('speciesResults').innerHTML = '';
-      });
-    }
+    clearTimeout(sokTimer);
+    if (term.length < 2) return;
+    sokTimer = setTimeout(async () => {
+      const eksterneTreff = await window.ApiClient.sokArter(rawTerm);
+      const lokaleNavn = new Set(lokaleTreff.map(s => s.norsk.toLowerCase()));
+      const nyeTreff = eksterneTreff.filter(s => !lokaleNavn.has(s.norsk.toLowerCase()));
+      // Ikke overskriv hvis brukeren har rukket å endre søket videre.
+      if (el('speciesSearch').value.trim().toLowerCase() === term) {
+        renderSpeciesResults(lokaleTreff, nyeTreff);
+      }
+    }, 300);
   });
 
   el('cancelFindBtn').addEventListener('click', () => toggleSheet('registerPanel', false));
   el('saveFindBtn').addEventListener('click', () => saveFind(pendingArt));
+}
+
+// Enkel én-dra beskjæringsboks over .cropImg (object-fit: contain, så hele
+// kildebildet er synlig — ulikt .previewImg/.scanImg som bruker cover).
+// Regner om skjermkoordinater til bildets naturlige pikselkoordinater via
+// contain-fit-geometrien (skala + letterbox-offset), siden rendret
+// bildestørrelse sjelden matcher kildebildets sideforhold 1:1.
+function wireCropInteraction(){
+  const wrap = el('cropWrap');
+  const img = el('cropImg');
+  const box = el('cropBox');
+  const brukBtn = el('brukUtsnittBtn');
+  let start = null; // {lx, ly} — lokale koordinater relativt til wrap
+  let rectNatural = null;
+
+  function bildeGeometri(){
+    const wrapRect = wrap.getBoundingClientRect();
+    const skala = Math.min(wrapRect.width / img.naturalWidth, wrapRect.height / img.naturalHeight);
+    const rendretBredde = img.naturalWidth * skala;
+    const rendretHoyde = img.naturalHeight * skala;
+    return {
+      wrapRect, skala,
+      offsetX: (wrapRect.width - rendretBredde) / 2,
+      offsetY: (wrapRect.height - rendretHoyde) / 2,
+      rendretBredde, rendretHoyde,
+    };
+  }
+
+  function lokaltPunkt(ev, geo){
+    const lx = ev.clientX - geo.wrapRect.left;
+    const ly = ev.clientY - geo.wrapRect.top;
+    return {
+      lx: Math.min(Math.max(lx, geo.offsetX), geo.offsetX + geo.rendretBredde),
+      ly: Math.min(Math.max(ly, geo.offsetY), geo.offsetY + geo.rendretHoyde),
+    };
+  }
+
+  wrap.addEventListener('pointerdown', (ev) => {
+    if (!img.naturalWidth) return;
+    wrap.setPointerCapture(ev.pointerId);
+    start = lokaltPunkt(ev, bildeGeometri());
+    box.hidden = false;
+  });
+  wrap.addEventListener('pointermove', (ev) => {
+    if (!start) return;
+    const geo = bildeGeometri();
+    const nu = lokaltPunkt(ev, geo);
+    const left = Math.min(start.lx, nu.lx);
+    const top = Math.min(start.ly, nu.ly);
+    const bredde = Math.abs(nu.lx - start.lx);
+    const hoyde = Math.abs(nu.ly - start.ly);
+    box.style.left = `${left}px`;
+    box.style.top = `${top}px`;
+    box.style.width = `${bredde}px`;
+    box.style.height = `${hoyde}px`;
+
+    rectNatural = {
+      x: (left - geo.offsetX) / geo.skala,
+      y: (top - geo.offsetY) / geo.skala,
+      width: bredde / geo.skala,
+      height: hoyde / geo.skala,
+    };
+    brukBtn.disabled = bredde < 20 || hoyde < 20; // for liten boks er ikke meningsfull
+  });
+  wrap.addEventListener('pointerup', () => { start = null; });
+  wrap.addEventListener('pointercancel', () => { start = null; });
+
+  brukBtn.addEventListener('click', () => {
+    if (!rectNatural) return;
+    cropToBlob(img, rectNatural).then((blob) => {
+      pendingKiCropBlob = blob;
+      kjorKiGjenkjenning();
+    });
+  });
+  el('analyserHeleBtn').addEventListener('click', () => {
+    pendingKiCropBlob = null;
+    kjorKiGjenkjenning();
+  });
 }
 
 async function saveFind(art){
@@ -1108,8 +1270,36 @@ async function saveFind(art){
 
 // ---------- liste ----------
 
+// Sorteringsvalg — 'kiKonfidens' er admin-only (nyttig for å finne
+// gjenkjenninger som bør dobbeltsjekkes), resten er for alle innloggede.
+const SORTERINGER = [
+  { v: 'nyeste', tekst: 'Nyeste' },
+  { v: 'eldste', tekst: 'Eldste' },
+  { v: 'alfabetisk', tekst: 'Alfabetisk' },
+  { v: 'flestFunn', tekst: 'Flest funn' },
+];
+const SORTERING_KI_KONFIDENS = { v: 'kiKonfidens', tekst: 'KI-konfidens (lavest først)' };
+
+// Grupperingsvalg — 'bruker' vises kun i "Alle funn"-visningen (i "Mine
+// funn" er alle rader uansett samme bruker).
+const GRUPPERINGER = [
+  { v: 'ingen', tekst: 'Ingen' },
+  { v: 'art', tekst: 'Art' },
+  { v: 'artstype', tekst: 'Artstype' },
+  { v: 'maned', tekst: 'Måned' },
+];
+const GRUPPERING_BRUKER = { v: 'bruker', tekst: 'Bruker' };
+
+function erAdmin(){
+  return !!brukerCache && brukerCache.rolle === 'admin';
+}
+
 function wireListPanel(){
-  el('listToggle').addEventListener('click', () => { renderList(); toggleSheet('listPanel'); });
+  // renderSortRow() re-kjøres ved hver åpning (ikke bare her ved oppstart) —
+  // brukerCache.rolle kan endre seg mellom innlasting og et senere
+  // logg inn/ut mens panelet er lukket, og admin-only-radene skal reflektere
+  // gjeldende status, ikke status ved sideinnlasting.
+  el('listToggle').addEventListener('click', () => { renderSortRow(); renderList(); toggleSheet('listPanel'); });
 
   const visninger = ['alle', 'mine'];
   el('visningRow').innerHTML = visninger.map(v =>
@@ -1119,6 +1309,9 @@ function wireListPanel(){
     btn.addEventListener('click', () => {
       activeVisning = btn.dataset.v;
       el('visningRow').querySelectorAll('.filterChip').forEach(b => b.classList.toggle('active', b === btn));
+      // "Bruker"-gruppering gir ikke mening i "Mine funn" (kun én bruker der).
+      if (activeVisning !== 'alle' && activeGroup === 'bruker') activeGroup = 'ingen';
+      renderGroupRow();
       renderFindsPaKart();
       renderList();
     });
@@ -1136,13 +1329,102 @@ function wireListPanel(){
       renderList();
     });
   });
+
+  renderGroupRow();
+  renderSortRow();
+}
+
+// Sortering (KI-konfidens-valget) og "kun usikre"-filteret er admin-only —
+// re-rendret ved hver åpning av listepanelet (se listToggle over), ikke bare
+// ved oppstart, slik at de reflekterer gjeldende innloggingsstatus.
+function renderSortRow(){
+  const sorteringer = erAdmin() ? [...SORTERINGER, SORTERING_KI_KONFIDENS] : SORTERINGER;
+  if (!erAdmin() && activeSort === 'kiKonfidens') activeSort = 'nyeste';
+  el('sortRow').innerHTML = sorteringer.map(s =>
+    `<button class="filterChip${s.v===activeSort?' active':''}" data-s="${s.v}">${escapeHtml(s.tekst)}</button>`
+  ).join('');
+  el('sortRow').querySelectorAll('.filterChip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeSort = btn.dataset.s;
+      el('sortRow').querySelectorAll('.filterChip').forEach(b => b.classList.toggle('active', b === btn));
+      renderList();
+    });
+  });
+
+  // "Kun usikre KI-gjenkjenninger" — admin-only, hjelper med å finne
+  // gjenkjenninger som bør dobbeltsjekkes (samme terskel som appen selv
+  // bruker for å auto-velge et KI-forslag).
+  if (erAdmin()) {
+    el('usikreRow').hidden = false;
+    el('usikreRow').innerHTML =
+      `<button class="filterChip${kunUsikre?' active':''}" id="kunUsikreChip">Kun usikre KI-gjenkjenninger</button>`;
+    el('kunUsikreChip').addEventListener('click', () => {
+      kunUsikre = !kunUsikre;
+      el('kunUsikreChip').classList.toggle('active', kunUsikre);
+      renderList();
+    });
+  } else {
+    el('usikreRow').hidden = true;
+    el('usikreRow').innerHTML = '';
+    kunUsikre = false;
+  }
+}
+
+function renderGroupRow(){
+  const grupperinger = activeVisning === 'alle' ? [...GRUPPERINGER, GRUPPERING_BRUKER] : GRUPPERINGER;
+  el('groupRow').innerHTML = grupperinger.map(g =>
+    `<button class="filterChip${g.v===activeGroup?' active':''}" data-g="${g.v}">${escapeHtml(g.tekst)}</button>`
+  ).join('');
+  el('groupRow').querySelectorAll('.filterChip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeGroup = btn.dataset.g;
+      el('groupRow').querySelectorAll('.filterChip').forEach(b => b.classList.toggle('active', b === btn));
+      renderList();
+    });
+  });
 }
 
 function synligeFunn(){
   return funnCache.filter(f =>
     (activeFilter === 'alle' || f.artstype === activeFilter) &&
-    (activeVisning === 'alle' || f.erEgenRegistrering)
+    (activeVisning === 'alle' || f.erEgenRegistrering) &&
+    (!kunUsikre || (f.kiKonfidens || 0) < window.KiClient.KONFIDENS_AUTO_TERSKEL)
   );
+}
+
+function sorterteFunn(list){
+  const sortert = list.slice();
+  if (activeSort === 'nyeste') sortert.sort((a, b) => new Date(b.tidspunkt) - new Date(a.tidspunkt));
+  else if (activeSort === 'eldste') sortert.sort((a, b) => new Date(a.tidspunkt) - new Date(b.tidspunkt));
+  else if (activeSort === 'alfabetisk') sortert.sort((a, b) => (a.art?.norsk || '').localeCompare(b.art?.norsk || '', 'no'));
+  else if (activeSort === 'kiKonfidens') sortert.sort((a, b) => (a.kiKonfidens || 0) - (b.kiKonfidens || 0));
+  else if (activeSort === 'flestFunn') {
+    const antallPerArt = {};
+    for (const f of list) antallPerArt[f.art?.norsk] = (antallPerArt[f.art?.norsk] || 0) + 1;
+    sortert.sort((a, b) => (antallPerArt[b.art?.norsk] || 0) - (antallPerArt[a.art?.norsk] || 0));
+  }
+  return sortert;
+}
+
+// Grupperer den sorterte listen til seksjoner. Seksjonene sorteres alltid
+// etter antall medlemmer (flest funn øverst, jf. konsept.md) — activeSort
+// styrer rekkefølgen INNENFOR hver seksjon.
+function gruppertFunn(sortertListe){
+  if (activeGroup === 'ingen') return [{ tittel: null, funn: sortertListe }];
+  const grupper = new Map();
+  for (const f of sortertListe) {
+    let nokkel;
+    if (activeGroup === 'art') nokkel = f.art?.norsk || 'Ukjent art';
+    else if (activeGroup === 'artstype') nokkel = f.artstype || 'annet';
+    else if (activeGroup === 'maned') nokkel = new Date(f.tidspunkt).toLocaleDateString('no-NO', { year: 'numeric', month: 'long' });
+    else if (activeGroup === 'bruker') nokkel = f.registrertAv || 'Ukjent bruker';
+    else nokkel = 'Annet';
+    if (!grupper.has(nokkel)) grupper.set(nokkel, []);
+    grupper.get(nokkel).push(f);
+  }
+  return Array.from(grupper.entries())
+    .map(([tittel, funn]) => ({ tittel, funn }))
+    .sort((a, b) => b.funn.length - a.funn.length);
 }
 
 // mapCtx kan være null i det (svært sjeldne) tilfellet kartinitialisering
@@ -1153,12 +1435,15 @@ function renderFindsPaKart(){
 }
 
 function renderList(){
-  const list = synligeFunn();
-  el('findList').innerHTML = list.map(f => `
-    <button class="findRow" data-id="${f.id}">
-      <strong>${escapeHtml(f.art?.norsk || 'Ukjent')}</strong>
-      <span class="hint">${new Date(f.tidspunkt).toLocaleDateString('no-NO')}${f.registrertAv ? ' · ' + escapeHtml(f.registrertAv) : ''}</span>
-    </button>`).join('') || '<p class="hint">Ingen registrerte funn ennå.</p>';
+  const seksjoner = gruppertFunn(sorterteFunn(synligeFunn()));
+  el('findList').innerHTML = seksjoner.map(seksjon => `
+    ${seksjon.tittel ? `<h3 class="findGroupHeader">${escapeHtml(seksjon.tittel)} <span class="hint">(${seksjon.funn.length})</span></h3>` : ''}
+    ${seksjon.funn.map(f => `
+      <button class="findRow" data-id="${f.id}">
+        <strong>${escapeHtml(f.art?.norsk || 'Ukjent')}</strong>
+        <span class="hint">${new Date(f.tidspunkt).toLocaleDateString('no-NO')}${f.registrertAv ? ' · ' + escapeHtml(f.registrertAv) : ''}</span>
+      </button>`).join('')}`
+  ).join('') || '<p class="hint">Ingen registrerte funn ennå.</p>';
   el('findList').querySelectorAll('.findRow').forEach(btn => {
     btn.addEventListener('click', () => {
       const f = funnCache.find(x => String(x.id) === btn.dataset.id);

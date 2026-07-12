@@ -1,5 +1,30 @@
 # Endringslogg
 
+## 0.9.0 — Fem gjenstående fase 3-punkter før v1
+Lukker gapet mellom konsept.md sin fase 3-liste og faktisk kode, avdekket
+ved en gjennomgang etter at v0.8.2 sin fulle app-wide sikkerhetsreview var
+fullført (se plan `async-sleeping-dragon.md`):
+
+- **Ordentlig artssøk**: fritekst-fallbacken ("bruk som ny art") er fjernet.
+  Nytt sesjonsbeskyttet endepunkt `GET /arter/sok` proxy-er live mot
+  Artsdatabankens offentlige taxon-API (samme vert `fetch_artskart.py`
+  bruker) i stedet for en ny ETL-seed-jobb — alltid ferskt, ingen ny
+  D1-tabell. Egen relevanssortering (eksakt treff først) kompenserer for at
+  API-et selv kutter av ved 15 treff uten `take`-parameteret.
+- **Gruppering/sortering/filtrering av funnlister**: nye rader i
+  funnlistepanelet — sorter (nyeste/eldste/alfabetisk/flest funn, pluss
+  KI-konfidens for admin), grupper (ingen/art/artstype/måned/bruker). "Kun
+  usikre KI-gjenkjenninger"-filter og KI-konfidens-sortering er admin-only.
+- **⚙️-panelet er nå admin-only** — var tidligere synlig for alle innloggede,
+  i strid med den opprinnelige planen om at det gamle MVP-innstillingspanelet
+  (GitHub-token, KI-proxy) skulle flyttes til admin-laget.
+- **Kartlagsvelgeren skjules for offentlige besøkende** — de har uansett kun
+  ett kartlag (Kartverket), så en velger med ett valg var bare støy.
+- **KI-beskjæring + fototips**: nytt steg i registreringsflyten der man kan
+  dra en beskjæringsboks over bildet før KI-analyse (hjelper KI når bakgrunn
+  ellers dominerer) — det ubeskårne bildet lagres alltid på funnet uansett.
+  Statisk fototips-tekst vises når KI er usikker/ikke finner noe.
+
 ## 0.8.1 — Sikkerhetsfiks: e-post bundet til invitasjonslenke
 `/security-review` av v0.4.2–v0.8.0 avdekket at invitasjonsregistrering
 (`POST /invitasjon/:token`) tidligere lot den som klikket lenken oppgi en
