@@ -1,0 +1,26 @@
+name = "bondoya-api"
+main = "src/index.js"
+compatibility_date = "2026-07-12"
+
+routes = [
+  { pattern = "api.bondoya.no", custom_domain = true }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bondoya"
+database_id = "fcc8265e-0a88-45cb-b474-b0706337edec"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "43f78af9a2184f3fa272d19bc89edfda"
+
+[vars]
+ALLOWED_ORIGIN = "https://bondoya.no"
+ENVIRONMENT = "production"
+
+# TURNSTILE_SECRET_KEY og RESEND_API_KEY settes IKKE her — sett dem med:
+#   wrangler secret put TURNSTILE_SECRET_KEY
+#   wrangler secret put RESEND_API_KEY
+# aldri i denne filen eller noe annet sted i det offentlige repoet.
+# Samme disiplin som bondoya-ki-proxy sine hemmeligheter.

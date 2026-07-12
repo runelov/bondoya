@@ -3,7 +3,6 @@ main = "src/index.js"
 compatibility_date = "2026-01-01"
 
 routes = [
-  { pattern = "api.bondoya.no", custom_domain = true },
   { pattern = "ki.bondoya.no", custom_domain = true }
 ]
 
