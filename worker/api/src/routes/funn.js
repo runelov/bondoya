@@ -37,8 +37,8 @@ export async function opprettFunn({ request, env }) {
     `INSERT INTO funn (
        art_norsk, art_latinsk, art_taxon_id, artstype, lat, lon, tidspunkt,
        bilde_r2_key, ki_konfidens, ki_alternativer,
-       registrert_av_bruker_id, registrert_av_kortnavn
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       registrert_av_bruker_id, registrert_av_kortnavn, synlig_for_public
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      RETURNING *`
   )
     .bind(
@@ -53,7 +53,8 @@ export async function opprettFunn({ request, env }) {
       felter.kiKonfidens,
       felter.kiAlternativer,
       bruker.id,
-      bruker.kortnavn
+      bruker.kortnavn,
+      felter.synligForPublic ? 1 : 0
     )
     .first();
 
@@ -88,7 +89,7 @@ export async function oppdaterFunn({ request, env, params }) {
   const rad = await env.DB.prepare(
     `UPDATE funn SET
        art_norsk = ?, art_latinsk = ?, art_taxon_id = ?, artstype = ?,
-       lat = ?, lon = ?, tidspunkt = ?
+       lat = ?, lon = ?, tidspunkt = ?, synlig_for_public = ?
      WHERE id = ?
      RETURNING *`
   )
@@ -100,6 +101,7 @@ export async function oppdaterFunn({ request, env, params }) {
       felter.lat,
       felter.lon,
       felter.tidspunkt,
+      felter.synligForPublic ? 1 : 0,
       params.id
     )
     .first();
@@ -129,11 +131,16 @@ export async function slettFunn({ request, env, params }) {
 
 export async function hentBilde({ request, env, params }) {
   const cors = corsHeaders(env);
-  const bruker = await requireSession(request, env);
-  if (!bruker) return json({ error: 'Ikke innlogget.' }, 401, cors);
 
   const rad = await hentFunnRad(params.id, env);
   if (!rad || !rad.bilde_r2_key) return json({ error: 'Fant ikke bilde.' }, 404, cors);
+
+  // Bilder til offentlig-synlige funn serveres uinnlogget (samme skille som
+  // listFunn/listFunnOffentlig) — alt annet krever sesjon som før.
+  if (!rad.synlig_for_public) {
+    const bruker = await requireSession(request, env);
+    if (!bruker) return json({ error: 'Ikke innlogget.' }, 401, cors);
+  }
 
   const objekt = await env.IMAGES.get(rad.bilde_r2_key);
   if (!objekt) return json({ error: 'Fant ikke bilde.' }, 404, cors);

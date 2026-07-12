@@ -42,6 +42,14 @@ async function hentFunn() {
   return res.json();
 }
 
+// Uinnlogget-vennlig: ingen credentials nødvendig, men skader ikke å bruke
+// samme fetch-wrapper som resten av klienten.
+async function hentOffentligeFunn() {
+  const res = await kall('/funn/offentlig');
+  if (!res.ok) throw new Error(`Kunne ikke hente funn (${res.status}).`);
+  return res.json();
+}
+
 // entry: samme felt-shape som appen bruker internt i dag ({art, artstype,
 // lat, lon, tidspunkt, imageBlob, kiKonfidens?, kiAlternativer?}) — bygger
 // om til multipart/form-data-feltnavnene Workeren forventer.
@@ -115,15 +123,23 @@ function bildeUrl(id) {
   return `${API_BASE}/funn/bilde/${id}`;
 }
 
+// Brukes av map.js til å bygge Leaflet-flismalen — samme same-site
+// cookie-resonnement som bildeUrl() over, se lib/tiles.js-proxyen.
+function flisUrlMal() {
+  return `${API_BASE}/tiles/{z}/{x}/{y}`;
+}
+
 window.ApiClient = {
   meg,
   beOmLenke,
   loggUt,
   hentFunn,
+  hentOffentligeFunn,
   opprettFunn,
   oppdaterFunn,
   slettFunn,
   bildeUrl,
+  flisUrlMal,
   hentBrukere,
   settBrukerStatus,
   slettBrukerPermanent,

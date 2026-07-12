@@ -1,4 +1,5 @@
 import { randomToken } from './crypto.js';
+import { erSynligForPublic } from './artsvisibility.js';
 
 export const ARTSTYPER = ['fugl', 'sjøpattedyr', 'pattedyr', 'plante', 'alge', 'annet'];
 
@@ -28,6 +29,26 @@ export function parseFunnRad(rad, innloggetBruker) {
     registrertAv: rad.registrert_av_kortnavn,
     erEgenRegistrering,
     kanSlette: erEgenRegistrering || innloggetBruker.rolle === 'admin',
+    opprettet: rad.opprettet,
+  };
+}
+
+// Formen offentlige (uinnloggede) besøkende får se — jf. konsept.md
+// "Artssynlighet for offentlige besøkende": "registrert av" og alt
+// KI-relatert utelates helt fra responsen, ikke bare skjules i UI-en.
+export function parseFunnRadOffentlig(rad) {
+  return {
+    id: rad.id,
+    art: {
+      norsk: rad.art_norsk,
+      latinsk: rad.art_latinsk,
+      taxonId: rad.art_taxon_id,
+    },
+    artstype: rad.artstype,
+    lat: rad.lat,
+    lon: rad.lon,
+    tidspunkt: rad.tidspunkt,
+    bildeUrl: rad.bilde_r2_key ? `/funn/bilde/${rad.id}` : null,
     opprettet: rad.opprettet,
   };
 }
@@ -78,7 +99,11 @@ export function validerFunnFelter(felter) {
     }
   }
 
-  return { artNorsk, artLatinsk, artstype, artTaxonId, lat, lon, tidspunkt, kiKonfidens, kiAlternativer };
+  // Servergenerert, aldri klientoppgitt — samme prinsipp som
+  // registrert_av_bruker_id. Se lib/artsvisibility.js.
+  const synligForPublic = erSynligForPublic(artTaxonId);
+
+  return { artNorsk, artLatinsk, artstype, artTaxonId, lat, lon, tidspunkt, kiKonfidens, kiAlternativer, synligForPublic };
 }
 
 // Validerer og laster opp et bilde til R2. Returnerer R2-nøkkelen, eller

@@ -1,5 +1,26 @@
 # Endringslogg
 
+## 0.4.0 — Fase 3 Milestone D: offentlig lag, Mapbox-proxy, rødliste-filtrering
+Siste store arkitekturstykke i fase 3 før den fulle app-brede
+sikkerhetsgjennomgangen (v1-releasekravet). Se `konsept.md` "Offentlig lag".
+
+- **Offentlig (ikke-innlogget) lag**: uinnloggede besøkende ser nå en live,
+  redusert funnliste og kart (kun Kartverket-laget) i stedet for tom/stale
+  data — nytt `GET /funn/offentlig`-endepunkt uten sesjonskrav. "Registrert
+  av", KI-konfidens og redigerings-/slettemuligheter er utelatt helt fra
+  responsen, ikke bare skjult i UI-en. Registrerings- og
+  innstillingsknappene er skjult for uinnlogget bruk.
+- **Rødliste-/artssynlighet-filtrering**: nytt `funn.synlig_for_public`-felt
+  (servergenerert ut fra artens taxonId ved registrering, aldri
+  klientoppgitt) håndheves i selve D1-spørringen — rødlistede arters funn
+  (NT/VU/EN, Norsk Rødliste 2021) vises aldri i det offentlige laget.
+- **Mapbox-flis-proxy**: satellittlaget hentes nå via en sesjonsbeskyttet
+  Worker-rute (`GET /tiles/:z/:x/:y`) med et ekte server-only Mapbox-token,
+  i stedet for et klient-synlig token i `localStorage`. Rate-limitert per
+  IP og edge-cachet (Cloudflare Cache API) bak sesjonssjekken — forsvar mot
+  både en stjålet sesjon og unødvendige Mapbox-kostnader. Satellittlaget
+  vises kun for innloggede; offentlige besøkende får kun Kartverket.
+
 ## 0.3.0 — Fase 3: innlogging, funn-CRUD, admin-tilgang
 Ny arkitektur bygget på Cloudflare Worker (`worker/api/`) + D1 + R2,
 erstatter "GitHub som backend" for selve funn-registreringen — se

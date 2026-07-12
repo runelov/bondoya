@@ -41,30 +41,40 @@ function initMap(){
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-  // Mapbox Satellite (krever access token — settes via setupPanel/localStorage,
-  // se app.js). Kartverket topografisk som gratis, tokenfritt sekundærlag.
+  // Kartverket topografisk: gratis, tokenfritt — eneste lag offentlige
+  // (uinnloggede) besøkende får se, jf. konsept.md "Offentlig lag".
   const topo = L.tileLayer('https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png', {
     maxZoom: 20,
     attribution: '&copy; Kartverket'
   });
+  topo.addTo(map);
 
-  let satellite = null;
-  const mapboxToken = localStorage.getItem('bondoya-mapbox-token');
-  if (mapboxToken) {
-    satellite = L.tileLayer(
-      `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
-      { maxZoom: 20, attribution: '&copy; Mapbox &copy; OpenStreetMap' }
-    );
-    satellite.addTo(map);
-  } else {
-    topo.addTo(map);
-  }
+  // Mapbox-satellitt hentes via bondoya-api sin sesjonsbeskyttede flis-proxy
+  // (se worker/api/src/routes/tiles.js) — aldri direkte mot Mapbox med et
+  // klient-synlig token. Laget bygges alltid, men legges kun i
+  // layer-switcheren når settInnloggingsstatus(true) er kalt.
+  const satellite = L.tileLayer(window.ApiClient.flisUrlMal(), {
+    maxZoom: 20,
+    attribution: '&copy; Mapbox &copy; OpenStreetMap'
+  });
 
   const baseLayers = { 'Kartverket (terreng)': topo };
-  if (satellite) baseLayers['Mapbox (satellitt)'] = satellite;
   // bottomleft: Leaflets standard topright/bottomright kolliderer med appens
   // egne ⚙️/📋-knapper (topBar) og GPS/zoom-knappene — bottomleft er ledig.
-  L.control.layers(baseLayers, {}, { position: 'bottomleft' }).addTo(map);
+  const layersControl = L.control.layers(baseLayers, {}, { position: 'bottomleft' }).addTo(map);
+
+  let satelliteLagtTil = false;
+  function settInnloggingsstatus(innlogget){
+    if (innlogget && !satelliteLagtTil) {
+      layersControl.addBaseLayer(satellite, 'Mapbox (satellitt)');
+      satelliteLagtTil = true;
+    } else if (!innlogget && satelliteLagtTil) {
+      map.removeLayer(satellite);
+      layersControl.removeLayer(satellite);
+      satelliteLagtTil = false;
+      topo.addTo(map);
+    }
+  }
 
   const findsLayer = L.layerGroup().addTo(map);
 
@@ -93,7 +103,7 @@ function initMap(){
   };
   locateBtn.addTo(map);
 
-  return { map, findsLayer, showMyPosition };
+  return { map, findsLayer, showMyPosition, settInnloggingsstatus };
 }
 
 const ARTSTYPE_COLORS = {

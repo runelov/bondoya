@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.4.0';
 const APP_BUILD_DATE = '2026-07-12';
 
 const el = id => document.getElementById(id);
@@ -104,9 +104,13 @@ async function sjekkSesjon(){
 
 async function refreshFromRepo(){
   if (!brukerCache) {
-    // Ikke innlogget: vis siste kjente lokale kopi (om noen), ingen tilgang
-    // til bondoya-api ennå — alt er innlogget-only i denne milestonen.
-    funnCache = window.GhStore.loadLocal('funn') || [];
+    // Offentlig (uinnlogget) lag: live, redusert visning fra bondoya-api,
+    // se konsept.md "Offentlig lag" og worker/api/src/routes/offentlig.js.
+    try {
+      funnCache = await window.ApiClient.hentOffentligeFunn();
+    } catch (e) {
+      showToast('Kunne ikke hente funn: ' + e.message);
+    }
     renderFindsPaKart();
     renderList();
     return;
@@ -173,6 +177,14 @@ function renderAccountPanel(){
   // skjer server-side (requireAdmin() på hvert admin-endepunkt), en
   // klientside-sjekk her er ingen sikkerhetsgrense i seg selv.
   el('adminToggle').hidden = !brukerCache || brukerCache.rolle !== 'admin';
+  // Offentlig (uinnlogget) lag: ingen tilgang til registrering eller andre
+  // "koster penger"-funksjoner, jf. konsept.md "Offentlig lag" — samme
+  // kosmetisk-skjuling-prinsipp som adminToggle over, faktisk håndhevelse
+  // skjer server-side (requireSession på POST /funn og GET /tiles/...).
+  el('fabRegister').hidden = !brukerCache;
+  el('fabGallery').hidden = !brukerCache;
+  el('setupToggle').hidden = !brukerCache;
+  if (mapCtx) mapCtx.settInnloggingsstatus(!!brukerCache);
 }
 
 // ---------- admin ----------
@@ -239,8 +251,6 @@ async function renderBrukerListe(){
 
 // ---------- setup-panel ----------
 
-const MAPBOX_TOKEN_KEY = 'bondoya-mapbox-token';
-
 function wireSetupPanel(){
   el('appVersion').textContent = `Bondøya v${APP_VERSION} (${APP_BUILD_DATE})`;
   const cfg = window.GhStore.getConfig();
@@ -251,7 +261,6 @@ function wireSetupPanel(){
   }
   el('kiProxyUrl').value = window.KiClient.getProxyUrl();
   el('kiSharedSecret').value = window.KiClient.getSharedSecret();
-  el('mapboxToken').value = localStorage.getItem(MAPBOX_TOKEN_KEY) || '';
 
   el('setupToggle').addEventListener('click', () => toggleSheet('setupPanel'));
 
@@ -261,7 +270,6 @@ function wireSetupPanel(){
     const token = el('ghToken').value.trim();
     const kiUrl = el('kiProxyUrl').value.trim();
     const kiSecret = el('kiSharedSecret').value.trim();
-    const mapboxToken = el('mapboxToken').value.trim();
     if (!owner || !repo || !token) {
       el('ghNote').textContent = 'Fyll ut eier, repo og token.';
       return;
@@ -272,12 +280,9 @@ function wireSetupPanel(){
       window.GhStore.setConfig({ owner, repo, token, branch });
       if (kiUrl) window.KiClient.setProxyUrl(kiUrl);
       if (kiSecret) window.KiClient.setSharedSecret(kiSecret);
-      const mapboxChanged = mapboxToken && mapboxToken !== (localStorage.getItem(MAPBOX_TOKEN_KEY) || '');
-      if (mapboxToken) localStorage.setItem(MAPBOX_TOKEN_KEY, mapboxToken);
       el('ghNote').textContent = `Tilkoblet (branch: ${branch}).`;
       await refreshFromRepo();
       toggleSheet('setupPanel', false);
-      if (mapboxChanged) { showToast('Mapbox-token lagret — laster kartet på nytt …'); setTimeout(() => location.reload(), 800); }
     } catch (e) {
       el('ghNote').textContent = 'Feil: ' + e.message;
     }

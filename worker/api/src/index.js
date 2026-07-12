@@ -5,6 +5,8 @@ import { beOmLenke, verifiser, loggUt } from './routes/auth.js';
 import { meg } from './routes/meg.js';
 import { listFunn, opprettFunn, oppdaterFunn, slettFunn, hentBilde } from './routes/funn.js';
 import { listBrukere, oppdaterBrukerStatus, slettBrukerPermanent } from './routes/admin.js';
+import { listFunnOffentlig } from './routes/offentlig.js';
+import { hentFlis } from './routes/tiles.js';
 
 const router = createRouter();
 router.post('/auth/be-om-lenke', beOmLenke);
@@ -16,6 +18,8 @@ router.post('/funn', opprettFunn);
 router.patch('/funn/:id', oppdaterFunn);
 router.delete('/funn/:id', slettFunn);
 router.get('/funn/bilde/:id', hentBilde);
+router.get('/funn/offentlig', listFunnOffentlig);
+router.get('/tiles/:z/:x/:y', hentFlis);
 router.get('/admin/brukere', listBrukere);
 router.patch('/admin/brukere/:id', oppdaterBrukerStatus);
 router.delete('/admin/brukere/:id', slettBrukerPermanent);
