@@ -1,5 +1,22 @@
 # Endringslogg
 
+## 0.9.2 — Fiks: kart lastet aldri hvis #map hadde 0x0 størrelse ved oppstart
+`initMapNarKlar()` (`js/app.js`) hadde allerede et dokumentert ett-forsøks
+retry for det sjeldne tilfellet der `#map`-containeren har 0x0 størrelse idet
+`initMap()` kjører (fitBounds kaster da "Invalid LatLng"). Retryet var i
+praksis dødfødt: `L.map('map', ...)` i `js/map.js` rekker å stemple
+containeren som initialisert FØR fitBounds kaster, så gjenforsøket feilet
+garantert med en helt annen feil ("Map container is already initialized")
+i stedet — uansett om containeren da hadde fått reell størrelse. Endte med
+et helt blankt kart og en app som aldri wiret opp innlogging/funnliste/
+registrering, siden alt dette venter på `initMapNarKlar()`.
+
+Fikset i `js/map.js`: `map.remove()` i en catch rundt `fitBounds`/
+`setMinZoom` rydder DOM og `_leaflet_id` slik at retry-forsøket faktisk kan
+lykkes. Verifisert ved å simulere 0x0-scenarioet direkte i nettleseren
+(display:none på #map) — forsøk 1 feiler som forventet, forsøk 2 (retryet)
+lykkes nå rent.
+
 ## 0.9.1 — Kartzoom-grenser og lengre Mapbox-cache
 Funnet ved funksjonell testing 2026-07-13: for dypt zoom ga uventede
 resultater på begge kartlagene.

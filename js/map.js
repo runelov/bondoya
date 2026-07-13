@@ -35,8 +35,20 @@ function initMap(){
     maxBoundsViscosity: 1.0
   });
 
-  map.fitBounds(BONDOYA_BOUNDS, { padding: [20, 20] });
-  map.setMinZoom(map.getBoundsZoom(MAP_MAX_BOUNDS));
+  try {
+    map.fitBounds(BONDOYA_BOUNDS, { padding: [20, 20] });
+    map.setMinZoom(map.getBoundsZoom(MAP_MAX_BOUNDS));
+  } catch (e) {
+    // #map kan ha 0x0 størrelse ved første forsøk (se initMapNarKlar i
+    // app.js), som får fitBounds/getBoundsZoom til å kaste "Invalid
+    // LatLng". L.map(...) over har da allerede stemplet containeren som
+    // initialisert — uten map.remove() her ville retry-forsøket i
+    // initMapNarKlar alltid feile med "Map container is already
+    // initialized" i stedet, uansett om containeren da har fått reell
+    // størrelse.
+    map.remove();
+    throw e;
+  }
   map.setMaxZoom(20);
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
