@@ -788,8 +788,12 @@ function updateSyncPill(){
 }
 
 async function trySync(){
-  const result = await window.OfflineQueue.syncQueue((item, status) => {
+  const result = await window.OfflineQueue.syncQueue((item, status, feilmelding) => {
     if (status === 'ferdig') showToast('Funn synkronisert ✓');
+    // Uten dette forsvant en synk-feil sporløst for brukeren — funnet ble
+    // stående i køen med ingen synlig forklaring på hvorfor, se
+    // offline-queue.js sin syncQueue().
+    else if (status === 'feilet') showToast(`Kunne ikke synke et funn ennå: ${feilmelding}. Prøver igjen senere.`);
   });
   if (result.synket > 0) await refreshFromRepo();
   renderQueueBadge();

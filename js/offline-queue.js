@@ -110,9 +110,14 @@ async function syncQueue(onProgress){
       if (onProgress) onProgress(item, 'ferdig');
     } catch (e) {
       console.warn('Synk feilet for', item.localId, e);
-      await queueUpdate(item.localId, { status: 'feilet', feilmelding: String(e.message || e) });
-      if (onProgress) onProgress(item, 'feilet');
-      break; // stopp batchen — resten prøves igjen neste gang
+      const feilmelding = String(e.message || e);
+      await queueUpdate(item.localId, { status: 'feilet', feilmelding });
+      // Fortsetter med resten av køen i stedet for å stoppe hele batchen her —
+      // ett permanent ugyldig element (f.eks. en avvist verdi) skal ikke
+      // blokkere andre, gyldige køede funn fra å synkes. Selve elementet
+      // forblir i køen (status 'feilet') og prøves på nytt neste gang
+      // trySync() kjører, jf. onProgress-varselet caller viser.
+      if (onProgress) onProgress(item, 'feilet', feilmelding);
     }
   }
   const gjenstår = (await queueAll()).length;
