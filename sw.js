@@ -41,7 +41,14 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       const network = fetch(event.request).then(res => {
-        if (res.ok) caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone()));
+        // .clone() MÅ skje synkront her, før res sendes videre — kloner vi
+        // den først etter at caches.open() (asynkront) er ferdig, kan
+        // responsens body allerede ha begynt å bli konsumert av siden selv,
+        // og clone() feiler med "Response body is already used".
+        if (res.ok) {
+          const cacheCopy = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, cacheCopy));
+        }
         return res;
       }).catch(() => cached);
       return cached || network;

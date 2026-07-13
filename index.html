@@ -226,7 +226,10 @@
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <!-- exifr: leser EXIF GPS/dato fra bilder valgt fra kamerarullen (etterregistrering), se onImageCaptured i app.js -->
 <script src="https://unpkg.com/exifr@7.1.3/dist/lite.umd.js"></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<!-- Turnstile lastes IKKE her lenger — se sikreTurnstileLastet() i app.js.
+     Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
+     sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
+     allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
 <script src="js/github-store.js"></script>
 <script src="js/api-client.js"></script>
 <script src="js/offline-queue.js"></script>

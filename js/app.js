@@ -203,9 +203,26 @@ function wireAccountPanel(){
   renderAccountPanel();
 }
 
+let turnstileLastet = false;
+// Lastes kun når innloggingsskjemaet faktisk kan bli vist — laster man
+// scriptet ubetinget (slik det lå som et statisk <script>-tag i index.html
+// før), kjører Cloudflare sin bakgrunns-PAT-sjekk (Private Access Token) mot
+// challenges.cloudflare.com for ALLE sidevisninger, også for brukere som
+// allerede er innlogget og aldri ser widgeten.
+function sikreTurnstileLastet(){
+  if (turnstileLastet) return;
+  turnstileLastet = true;
+  const script = document.createElement('script');
+  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+}
+
 function renderAccountPanel(){
   el('accountLoggedOut').hidden = !!brukerCache;
   el('accountLoggedInn').hidden = !brukerCache;
+  if (!brukerCache) sikreTurnstileLastet();
   if (brukerCache) el('accountKortnavn').textContent = brukerCache.kortnavn;
   // Kun kosmetisk — skjuler knappen for ikke-admins. Faktisk håndhevelse
   // skjer server-side (requireAdmin() på hvert admin-endepunkt), en
