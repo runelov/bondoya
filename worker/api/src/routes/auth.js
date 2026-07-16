@@ -43,11 +43,22 @@ export async function beOmLenke({ request, env, url }) {
   // tidsnormalisert ferdigstillelse — se konsept.md "Sikring av
   // innloggingssiden". Ikke legg til noen gren under som kan returnere
   // tidligere eller med annen tekst enn suksess-responsen nederst.
-  const bruker = await env.DB.prepare('SELECT id FROM brukere WHERE epost = ?1 AND status = ?2')
+  const bruker = await env.DB.prepare('SELECT id, aktivert_tidspunkt FROM brukere WHERE epost = ?1 AND status = ?2')
     .bind(epost, 'aktiv')
     .first();
 
   if (bruker) {
+    // "Aktivert" = brukeren har selv lagt inn e-posten sin her og trigget
+    // denne sendingen, atskilt fra "registrert" (raden finnes allerede, fra
+    // invitasjon/admin) — se migrations/0016 og adminens brukerliste.
+    // Skrives kun første gang (if-sjekken), i samme gren som allerede gjør
+    // annet DB-arbeid her — ingen ny forgrening som kan skille "aktivert"/
+    // "ikke aktivert" på responstid (tidsnormaliser() under jevner uansett
+    // ut totaltiden).
+    if (!bruker.aktivert_tidspunkt) {
+      await env.DB.prepare("UPDATE brukere SET aktivert_tidspunkt = datetime('now') WHERE id = ?").bind(bruker.id).run();
+    }
+
     const rawToken = randomToken();
     const hash = await sha256Hex(rawToken);
     const utloper = Date.now() + TOKEN_LEVETID_MS;

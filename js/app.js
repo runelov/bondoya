@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.19';
+const APP_VERSION = '0.9.20';
 const APP_BUILD_DATE = '2026-07-16';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -882,6 +882,9 @@ async function renderBrukerListe(){
       <div class="findRow" style="display:flex;flex-direction:column;align-items:stretch;gap:6px">
         <div><strong>${escapeHtml(b.kortnavn)}</strong> <span class="hint">${escapeHtml(b.rolle)}</span></div>
         <div class="hint">${escapeHtml(b.epost)} — ${slettetPermanent ? 'permanent slettet' : b.status}</div>
+        <div class="hint">${b.aktivert_tidspunkt
+          ? `Aktivert ${new Date(b.aktivert_tidspunkt.replace(' ', 'T') + 'Z').toLocaleDateString('no-NO')}`
+          : 'Registrert, men ikke aktivert ennå — har aldri bedt om innloggingslenke selv'}</div>
         <div class="sheetActions">
           <button class="secondaryBtn" data-handling="status" data-id="${b.id}" data-neste="${b.status === 'aktiv' ? 'deaktivert' : 'aktiv'}"
             ${slettetPermanent || erSelv ? 'disabled' : ''}>${b.status === 'aktiv' ? 'Deaktiver' : 'Reaktiver'}</button>

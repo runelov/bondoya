@@ -1,5 +1,25 @@
 # Endringslogg
 
+## 0.9.20 — Skiller "registrert" fra "aktivert" i brukerlisten
+Svar på "skille mellom registrert og aktivert status på brukere? Med
+aktivert mener jeg at de selv har lagt inn eposten sin i appen, og trigget
+sending til seg selv for å komme inn i appen."
+
+- **Ny `aktivert_tidspunkt`-kolonne** (migrations/0016, enkel `ALTER TABLE
+  ADD COLUMN` — ingen CHECK-constraint å bygge om). NULL = registrert (raden
+  finnes, typisk fra invitasjon/admin-opprettelse), men aldri aktivert.
+- **Satt i `beOmLenke()`** (`worker/api/src/routes/auth.js`) første gang en
+  bruker faktisk ber om en innloggingslenke til sin egen e-post — kun én
+  gang (if-sjekk, ikke overskrevet ved senere forespørsler). Lagt inn i den
+  eksisterende `if (bruker)`-grenen, ingen ny forgrening — viktig her, siden
+  denne ruten er bevisst tidsnormalisert og identisk uansett treff/ikke-treff
+  for å unngå e-post-enumerering (se funksjonens eksisterende kommentar).
+- Bevisst IKKE forvekslet med den eksisterende `status`-kolonnen
+  ('aktiv'/'deaktivert') — det er et helt annet, admin-styrt konsept
+  (kan brukeren logge inn i det hele tatt), ikke om personen selv har prøvd.
+- **Brukerlisten i admin-panelet** viser nå "Aktivert `<dato>`" eller
+  "Registrert, men ikke aktivert ennå" per bruker.
+
 ## 0.9.19 — Admin-panelet delt opp i arkfaner
 Svar på "admin-grensesnittet er litt voldsomt nå — arkfaner?". 6 stablede
 seksjoner (innstillinger, arter, artsomtale, sider, invitasjoner, brukere) i

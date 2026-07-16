@@ -12,7 +12,7 @@ export async function listBrukere({ request, env }) {
   if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
 
   const { results } = await env.DB.prepare(
-    `SELECT id, epost, kortnavn, rolle, status, slettet_tidspunkt, opprettet
+    `SELECT id, epost, kortnavn, rolle, status, slettet_tidspunkt, aktivert_tidspunkt, opprettet
      FROM brukere ORDER BY opprettet`
   ).all();
   return json(results, 200, cors);
