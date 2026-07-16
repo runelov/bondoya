@@ -1,5 +1,21 @@
 # Endringslogg
 
+## 0.9.18 — Funndetaljer viser hele bildet, ikke et sentrert utsnitt
+Svar på "bildeutsnitt i funnvisning: hele dyret vises ikke, eksempelvis
+havørn-registreringen". Rotårsak: `.previewImg` (delt med registrerings-
+forhåndsvisningen) brukte `object-fit: cover` med standard sentrert
+posisjon — for et høyt/portrettformat bilde der dyret sitter langt fra
+bildets geometriske senter (typisk for en fugl høyt oppe i bildet), kutter
+et sentrert cover-utsnitt bort selve dyret. Bekreftet visuelt med et
+testbilde bygget etter samme mønster (emne nær toppen av et høyt bilde).
+
+Funndetaljer bruker nå en egen `.detailImg`-klasse med `object-fit: contain`
+(samme resonnement som `.cropImg` i beskjæringssteget under registrering,
+se `wireCropInteraction()`) — hele bildet vises alltid, med sort
+brevkasse-fylling der sideforholdet ikke matcher. Selve registrerings-
+forhåndsvisningen (`.previewImg`) er uendret — fortsatt et jevnt utfylt
+cover-utsnitt der, siden brukeren uansett ser hele originalbildet rett før.
+
 ## 0.9.17 — Delt (Cloudflare-edge) caching for offentlig synlige funn-bilder
 Svar på "caching av funn-thumbnails, Cloudflare og nettleser-innstillinger".
 

@@ -301,6 +301,15 @@ body{
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 }
+/* contain, ikke cover — funndetaljer skal alltid vise hele bildet, se
+   openDetail() sin kommentar (havørn-eksempelet: cover kunne kutte vekk
+   dyret når det ikke satt midt i bildet). */
+.detailImg{
+  display: block; width: 100%; max-height: 400px; object-fit: contain;
+  background: #000;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
 .scanWrap{ position: relative; overflow: hidden; border-radius: var(--radius-md); }
 .cropWrap{
   position: relative; overflow: hidden;

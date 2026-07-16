@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.17';
+const APP_VERSION = '0.9.18';
 const APP_BUILD_DATE = '2026-07-16';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -1704,8 +1704,13 @@ async function openDetail(funn){
   const s = speciesCache.find(sp => sp.latinsk === funn.art?.latinsk) || {};
   const count = nearbyCountFor(funn.art?.norsk || '');
 
+  // .detailImg (object-fit: contain, ikke .previewImg sin cover) — et
+  // sentrert cover-utsnitt kunne kutte vekk selve dyret når det ikke sitter
+  // midt i bildet (tilbakemelding 2026-07-16, havørn-eksempelet: fuglen satt
+  // høyt oppe i et høyt/portrettformat bilde, cover-utsnittet viste stort
+  // sett himmel/gren). Samme resonnement som .cropImg, se wireCropInteraction.
   const bildeHtml = funn.bildeUrl
-    ? `<img src="${window.ApiClient.bildeUrl(funn.id)}" class="previewImg" alt="">`
+    ? `<img src="${window.ApiClient.bildeUrl(funn.id)}" class="detailImg" alt="">`
     : '';
 
   // Bygges fra funn.art.taxonId når den finnes (dekker ALLE funn, ikke bare
