@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.18';
+const APP_VERSION = '0.9.19';
 const APP_BUILD_DATE = '2026-07-16';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -269,10 +269,29 @@ function renderAccountPanel(){
 
 // ---------- admin ----------
 
+// Admin-panelet vokste til 6 stablede seksjoner i én lang rulling ("litt
+// voldsomt", tilbakemelding 2026-07-16) — arkfaner i stedet. Alle seksjoners
+// data lastes fortsatt eagerly ved åpning (se adminToggle-lytteren under),
+// arkfanene er bare et rent visningslag oppå det — enklere enn lat lasting
+// per fane, og ingen av seksjonene er tunge nok til at det trengs.
+function wireAdminTabs(){
+  const knapper = document.querySelectorAll('.adminTabBtn');
+  function velgFane(navn){
+    knapper.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === navn));
+    document.querySelectorAll('.adminTabPanel').forEach(panel => {
+      panel.hidden = panel.id !== `adminTab-${navn}`;
+    });
+  }
+  knapper.forEach(btn => btn.addEventListener('click', () => velgFane(btn.dataset.tab)));
+  velgFane('innstillinger');
+}
+
 function wireAdminPanel(){
+  wireAdminTabs();
   el('adminToggle').addEventListener('click', async () => {
     toggleSheet('adminPanel');
     if (!el('adminPanel').hidden) {
+      document.querySelector('.adminTabBtn[data-tab="innstillinger"]')?.click();
       await renderInnstillinger();
       tomArtSkjema();
       await renderAdminSkjulteArter();

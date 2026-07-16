@@ -90,83 +90,105 @@
   <div class="sheetActions">
     <button id="dashboardApneBtn" class="secondaryBtn">📊 Dashboard</button>
   </div>
-  <h2>Admin — innstillinger</h2>
-  <div class="findRow" style="display:flex;flex-direction:column;align-items:stretch;gap:6px">
-    <div><strong>Offentlig funnvisning</strong></div>
-    <p class="hint">Når av: funn vises ikke i kartet eller funnlisten for besøkende uten innlogging, og det offentlige API-et returnerer ingen funn-data. Når på: funn filtreres alltid (rødliste og selvvalgte) som i dag.</p>
-    <button id="funnSynligForPublicBtn" class="secondaryBtn"></button>
+  <div id="adminTabs" class="adminTabs">
+    <button class="adminTabBtn" data-tab="innstillinger">Innstillinger</button>
+    <button class="adminTabBtn" data-tab="arter">Arter</button>
+    <button class="adminTabBtn" data-tab="sider">Sider</button>
+    <button class="adminTabBtn" data-tab="invitasjoner">Invitasjoner</button>
+    <button class="adminTabBtn" data-tab="brukere">Brukere</button>
   </div>
-  <h2>Admin — arter</h2>
-  <p class="hint">Skjul en art fra det offentlige laget selv om den ikke er rødlistet (f.eks. sensitiv lokalitet). Dette oppdaterer også allerede registrerte funn av arten, ikke bare fremtidige.</p>
-  <div id="artListeAdmin" class="findList"></div>
-  <div style="display:flex;flex-direction:column;gap:4px">
-    <label for="artSokInput">Søk art (Artsdatabanken, forhåndsutfyller under)</label>
-    <input id="artSokInput" type="text" placeholder="f.eks. multer" autocomplete="off">
-    <div id="artSokResultater" class="speciesResults"></div>
-    <label for="artTaxonIdInput">TaxonId</label>
-    <input id="artTaxonIdInput" type="number" min="1" step="1">
-    <label for="artVisningsnavnInput">Visningsnavn</label>
-    <input id="artVisningsnavnInput" type="text">
-    <label for="artGrunnInput">Grunn (valgfritt, kun synlig for admin)</label>
-    <input id="artGrunnInput" type="text">
-    <div class="sheetActions">
-      <button id="artSkjulBtn" class="primaryBtn">Skjul art</button>
+
+  <div id="adminTab-innstillinger" class="adminTabPanel">
+    <h2>Admin — innstillinger</h2>
+    <div class="findRow" style="display:flex;flex-direction:column;align-items:stretch;gap:6px">
+      <div><strong>Offentlig funnvisning</strong></div>
+      <p class="hint">Når av: funn vises ikke i kartet eller funnlisten for besøkende uten innlogging, og det offentlige API-et returnerer ingen funn-data. Når på: funn filtreres alltid (rødliste og selvvalgte) som i dag.</p>
+      <button id="funnSynligForPublicBtn" class="secondaryBtn"></button>
     </div>
-    <p id="artAdminNote" class="note"></p>
   </div>
-  <h2>Admin — artsomtale</h2>
-  <p class="hint">Skriv eller rediger artsomtalen som vises i funndetaljer. Uten en admin-skrevet omtale her, forsøker appen automatisk et sammendrag fra Wikipedia (merket som sådan) — det overskrives aldri automatisk av dette skjemaet før du selv lagrer noe.</p>
-  <div style="display:flex;flex-direction:column;gap:4px">
-    <label for="artsomtaleSokInput">Søk art (Artsdatabanken)</label>
-    <input id="artsomtaleSokInput" type="text" placeholder="f.eks. kamskjell" autocomplete="off">
-    <div id="artsomtaleSokResultater" class="speciesResults"></div>
-    <p id="artsomtaleValgtVisning" class="hint"></p>
-    <label for="artsomtaleTekstInput">Beskrivelse</label>
-    <textarea id="artsomtaleTekstInput" rows="4" maxlength="2000"></textarea>
-    <div class="sheetActions">
-      <button id="artsomtaleLagreBtn" class="primaryBtn" disabled>Lagre beskrivelse</button>
+
+  <div id="adminTab-arter" class="adminTabPanel">
+    <h2>Admin — arter</h2>
+    <p class="hint">Skjul en art fra det offentlige laget selv om den ikke er rødlistet (f.eks. sensitiv lokalitet). Dette oppdaterer også allerede registrerte funn av arten, ikke bare fremtidige.</p>
+    <div id="artListeAdmin" class="findList"></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label for="artSokInput">Søk art (Artsdatabanken, forhåndsutfyller under)</label>
+      <input id="artSokInput" type="text" placeholder="f.eks. multer" autocomplete="off">
+      <div id="artSokResultater" class="speciesResults"></div>
+      <label for="artTaxonIdInput">TaxonId</label>
+      <input id="artTaxonIdInput" type="number" min="1" step="1">
+      <label for="artVisningsnavnInput">Visningsnavn</label>
+      <input id="artVisningsnavnInput" type="text">
+      <label for="artGrunnInput">Grunn (valgfritt, kun synlig for admin)</label>
+      <input id="artGrunnInput" type="text">
+      <div class="sheetActions">
+        <button id="artSkjulBtn" class="primaryBtn">Skjul art</button>
+      </div>
+      <p id="artAdminNote" class="note"></p>
     </div>
-    <p id="artsomtaleNote" class="note"></p>
-  </div>
-  <h2>Admin — sider</h2>
-  <div id="sideListeAdmin" class="findList"></div>
-  <div id="sideSkjema" style="display:flex;flex-direction:column;gap:4px">
-    <label for="sideTittelInput">Tittel</label>
-    <input id="sideTittelInput" type="text">
-    <label for="sideSlugInput">Slug (i URL-en, kun a-z/0-9/bindestrek)</label>
-    <input id="sideSlugInput" type="text" autocomplete="off">
-    <label for="sideInnholdInput">Innhold</label>
-    <textarea id="sideInnholdInput" rows="8"></textarea>
-    <label for="sideSynlighetSelect">Synlighet</label>
-    <select id="sideSynlighetSelect">
-      <option value="offentlig">Offentlig (alle, også uinnlogget)</option>
-      <option value="palogget">Kun innloggede</option>
-    </select>
-    <label for="sideStatusSelect">Status</label>
-    <select id="sideStatusSelect">
-      <option value="kladd">Kladd (ikke synlig for noen ennå)</option>
-      <option value="publisert">Publisert</option>
-    </select>
-    <div class="sheetActions">
-      <button id="sideLagreBtn" class="primaryBtn">Lagre</button>
-      <button id="sideNyBtn" class="secondaryBtn">Ny side</button>
+    <h2>Admin — artsomtale</h2>
+    <p class="hint">Skriv eller rediger artsomtalen som vises i funndetaljer. Uten en admin-skrevet omtale her, forsøker appen automatisk et sammendrag fra Wikipedia (merket som sådan) — det overskrives aldri automatisk av dette skjemaet før du selv lagrer noe.</p>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label for="artsomtaleSokInput">Søk art (Artsdatabanken)</label>
+      <input id="artsomtaleSokInput" type="text" placeholder="f.eks. kamskjell" autocomplete="off">
+      <div id="artsomtaleSokResultater" class="speciesResults"></div>
+      <p id="artsomtaleValgtVisning" class="hint"></p>
+      <label for="artsomtaleTekstInput">Beskrivelse</label>
+      <textarea id="artsomtaleTekstInput" rows="4" maxlength="2000"></textarea>
+      <div class="sheetActions">
+        <button id="artsomtaleLagreBtn" class="primaryBtn" disabled>Lagre beskrivelse</button>
+      </div>
+      <p id="artsomtaleNote" class="note"></p>
     </div>
-    <p id="sideAdminNote" class="note"></p>
   </div>
-  <h2>Admin — invitasjoner</h2>
-  <div id="invitasjonNyLenke" hidden style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-    <p class="hint">Lenken vises kun nå — kopier den og del den med personen du inviterer.</p>
-    <input id="invitasjonLenkeInput" type="text" readonly>
-    <button id="invitasjonKopierBtn" class="secondaryBtn">Kopier lenke</button>
+
+  <div id="adminTab-sider" class="adminTabPanel">
+    <h2>Admin — sider</h2>
+    <div id="sideListeAdmin" class="findList"></div>
+    <div id="sideSkjema" style="display:flex;flex-direction:column;gap:4px">
+      <label for="sideTittelInput">Tittel</label>
+      <input id="sideTittelInput" type="text">
+      <label for="sideSlugInput">Slug (i URL-en, kun a-z/0-9/bindestrek)</label>
+      <input id="sideSlugInput" type="text" autocomplete="off">
+      <label for="sideInnholdInput">Innhold</label>
+      <textarea id="sideInnholdInput" rows="8"></textarea>
+      <label for="sideSynlighetSelect">Synlighet</label>
+      <select id="sideSynlighetSelect">
+        <option value="offentlig">Offentlig (alle, også uinnlogget)</option>
+        <option value="palogget">Kun innloggede</option>
+      </select>
+      <label for="sideStatusSelect">Status</label>
+      <select id="sideStatusSelect">
+        <option value="kladd">Kladd (ikke synlig for noen ennå)</option>
+        <option value="publisert">Publisert</option>
+      </select>
+      <div class="sheetActions">
+        <button id="sideLagreBtn" class="primaryBtn">Lagre</button>
+        <button id="sideNyBtn" class="secondaryBtn">Ny side</button>
+      </div>
+      <p id="sideAdminNote" class="note"></p>
+    </div>
   </div>
-  <div id="invitasjonListe" class="findList"></div>
-  <label for="invitasjonEpostInput">E-post til personen du inviterer</label>
-  <input id="invitasjonEpostInput" type="email" autocomplete="off" placeholder="navn@epost.no">
-  <div class="sheetActions">
-    <button id="invitasjonGenererBtn" class="primaryBtn">Generer invitasjonslenke</button>
+
+  <div id="adminTab-invitasjoner" class="adminTabPanel">
+    <h2>Admin — invitasjoner</h2>
+    <div id="invitasjonNyLenke" hidden style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+      <p class="hint">Lenken vises kun nå — kopier den og del den med personen du inviterer.</p>
+      <input id="invitasjonLenkeInput" type="text" readonly>
+      <button id="invitasjonKopierBtn" class="secondaryBtn">Kopier lenke</button>
+    </div>
+    <div id="invitasjonListe" class="findList"></div>
+    <label for="invitasjonEpostInput">E-post til personen du inviterer</label>
+    <input id="invitasjonEpostInput" type="email" autocomplete="off" placeholder="navn@epost.no">
+    <div class="sheetActions">
+      <button id="invitasjonGenererBtn" class="primaryBtn">Generer invitasjonslenke</button>
+    </div>
   </div>
-  <h2>Admin — brukere</h2>
-  <div id="brukerList" class="findList"></div>
+
+  <div id="adminTab-brukere" class="adminTabPanel">
+    <h2>Admin — brukere</h2>
+    <div id="brukerList" class="findList"></div>
+  </div>
 </div>
 
 <!-- Setup: KI-proxy/Mapbox, samt valgfri tilkobling til det private artskart-berikelsesrepoet -->

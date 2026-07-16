@@ -1,5 +1,15 @@
 # Endringslogg
 
+## 0.9.19 — Admin-panelet delt opp i arkfaner
+Svar på "admin-grensesnittet er litt voldsomt nå — arkfaner?". 6 stablede
+seksjoner (innstillinger, arter, artsomtale, sider, invitasjoner, brukere) i
+én lang rulling er nå 5 arkfaner (arter+artsomtale slått sammen til én, siden
+begge er artsrelatert admin-arbeid). Alle seksjoners data lastes fortsatt
+eagerly ved åpning som før (`adminToggle`-lytteren i `wireAdminPanel()`) —
+arkfanene (`wireAdminTabs()`) er bare et rent visningslag oppå det, ingen av
+seksjonene er tunge nok til å trenge lat lasting per fane. Åpner alltid på
+"Innstillinger" ved hver ny åpning av panelet.
+
 ## 0.9.18 — Funndetaljer viser hele bildet, ikke et sentrert utsnitt
 Svar på "bildeutsnitt i funnvisning: hele dyret vises ikke, eksempelvis
 havørn-registreringen". Rotårsak: `.previewImg` (delt med registrerings-

@@ -232,6 +232,20 @@ body{
 }
 .filterChip.active{ background: var(--ink); color: #fff; border-color: var(--ink); }
 
+/* ---------- admin: arkfaner ---------- */
+
+.adminTabs{ display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+.adminTabBtn{
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #f5f5f7;
+  font-size: 14px; font-weight: 600;
+}
+.adminTabBtn.active{ background: var(--ink); color: #fff; border-color: var(--ink); }
+
 /* sortering+gruppering: to faste dropdowns i én rad i stedet for to fulle
    chip-rader — samme antall valg tar mindre vertikal plass, og bredden er
    uavhengig av hvor mange alternativer det er (viktig for admin, som får
