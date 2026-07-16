@@ -130,7 +130,7 @@ export async function slettFunn({ request, env, params }) {
   return new Response(null, { status: 204, headers: cors });
 }
 
-export async function hentBilde({ request, env, params }) {
+export async function hentBilde({ request, env, ctx, params }) {
   const cors = corsHeaders(env);
 
   const rad = await hentFunnRad(params.id, env);
@@ -144,17 +144,49 @@ export async function hentBilde({ request, env, params }) {
   if (!offentligPa) {
     const bruker = await requireSession(request, env);
     if (!bruker) return json({ error: 'Ikke innlogget.' }, 401, cors);
+
+    const objekt = await env.IMAGES.get(rad.bilde_r2_key);
+    if (!objekt) return json({ error: 'Fant ikke bilde.' }, 404, cors);
+    // Privat (kun nettleserens egen cache) — riktig så lenge tilgangen er
+    // sesjonsavhengig. Lang levetid er trygt her: det er brukerens eget
+    // bilde av eget/tilgjengelig funn, ikke noe delt.
+    return new Response(objekt.body, {
+      status: 200,
+      headers: {
+        'Content-Type': objekt.httpMetadata?.contentType || 'image/jpeg',
+        'Cache-Control': 'private, max-age=31536000',
+        ...cors,
+      },
+    });
   }
+
+  // Offentlig synlig funn: bildet kan caches DELT (Cloudflares edge), ikke
+  // bare i den enkelte nettleser — dette var tidligere `private` uansett
+  // gren, som forhindret enhver edge-caching og tvang hvert visnings-kall
+  // (fra hver besøkende) helt til R2 (tilbakemelding 2026-07-16: "Caching av
+  // funn-thumbnails, Cloudflare og nettleser-innstillinger"). En vanlig
+  // Workers-respons caches ikke automatisk av Cloudflares CDN kun fordi
+  // Cache-Control sier public — krever eksplisitt bruk av Cache API slik som
+  // her (uten en Cache Rule i dashbordet). Kortere levetid enn den private
+  // grenen (1 time, ikke 1 år): begrenser hvor lenge et allerede-cachet bilde
+  // kan henge igjen i Cloudflares edge dersom admin siden skjuler arten eller
+  // skrur av offentlig funnvisning — det finnes ingen purge-mekanisme for det.
+  const cache = caches.default;
+  const cacheKey = new Request(request.url, { method: 'GET' });
+  const cachetSvar = await cache.match(cacheKey);
+  if (cachetSvar) return cachetSvar;
 
   const objekt = await env.IMAGES.get(rad.bilde_r2_key);
   if (!objekt) return json({ error: 'Fant ikke bilde.' }, 404, cors);
 
-  return new Response(objekt.body, {
+  const svar = new Response(objekt.body, {
     status: 200,
     headers: {
       'Content-Type': objekt.httpMetadata?.contentType || 'image/jpeg',
-      'Cache-Control': 'private, max-age=31536000',
+      'Cache-Control': 'public, max-age=3600',
       ...cors,
     },
   });
+  ctx.waitUntil(cache.put(cacheKey, svar.clone()));
+  return svar;
 }

@@ -1,5 +1,27 @@
 # Endringslogg
 
+## 0.9.17 — Delt (Cloudflare-edge) caching for offentlig synlige funn-bilder
+Svar på "caching av funn-thumbnails, Cloudflare og nettleser-innstillinger".
+
+- **Rotårsak**: `GET /funn/bilde/:id` satte `Cache-Control: private` uansett
+  gren — også for funn som faktisk er offentlig synlige. `private` forbyr
+  enhver delt/CDN-cache, så hvert visningskall (fra HVER besøkende) måtte
+  helt til R2, uansett hvor mange som så det samme offentlige bildet.
+- **Fiks, kun for den offentlig-synlige grenen** (`worker/api/src/routes/
+  funn.js`): eksplisitt bruk av Workers Cache API (`caches.default`) —
+  nødvendig fordi en vanlig Workers-respons IKKE caches automatisk av
+  Cloudflares CDN bare fordi headeren sier `public` (krever enten dette,
+  eller en Cache Rule i dashbordet, som ikke er satt opp). Verifisert lokalt:
+  andre kall til samme bilde-URL ga `CF-Cache-Status: HIT`.
+- **Bevisst kortere levetid enn den private grenen** (1 time, ikke 1 år):
+  det finnes ingen purge-mekanisme hvis admin siden skjuler arten eller
+  skrur av offentlig funnvisning, så levetiden begrenser hvor lenge et
+  allerede-cachet bilde kan henge igjen i Cloudflares edge etter en slik
+  endring.
+- Den sesjonsavhengige grenen (funn som krever innlogging) er uendret:
+  fortsatt `private, max-age=31536000` — riktig så lenge tilgangen er
+  brukerspesifikk, ikke noe å dele på tvers av besøkende.
+
 ## 0.9.16 — Feilklikk på nærliggende funn under posisjonsvalg, flytt lokasjon ved å klikke i kart
 Svar på to relaterte tilbakemeldinger: "hva om jeg registrerer et funn nært
 et annet, og klikker feil på det andre funnet mens jeg setter lokasjon —
