@@ -1,5 +1,25 @@
 # Endringslogg
 
+## 0.9.16 — Feilklikk på nærliggende funn under posisjonsvalg, flytt lokasjon ved å klikke i kart
+Svar på to relaterte tilbakemeldinger: "hva om jeg registrerer et funn nært
+et annet, og klikker feil på det andre funnet mens jeg setter lokasjon —
+ser ut som jeg åpner det funnet og går meg bort" + "klin umulig å flytte
+posisjon ved å endre koordinat-verdier, vil klikke i kartet i stedet".
+
+- **Rotårsak til feilklikk-problemet**: `L.circleMarker` sine nåler brukte
+  Leaflets standard `bubblingMouseEvents: true` — et klikk PÅ en nål bobler
+  da videre til kartets eget click-lyttepunkt, og utløser BÅDE
+  `funn:selected` (åpner nålens funn) OG en samtidig aktiv
+  `map.once('click', …)` for posisjonsvalg, i samme klikk. Satt til `false`
+  i `js/map.js` — et nålklikk teller nå som håndtert og bobler ikke videre.
+  Restrisiko (klikker presist på en nål): nålens funn åpnes i stedet for at
+  posisjon settes, men posisjonsvalget forblir aktivt til neste klikk i åpent
+  vann, i stedet for at begge handlinger kolliderer i samme klikk som før.
+- **Ny "📍 Velg posisjon i kart"-knapp i redigeringsskjemaet** for
+  eksisterende funn — samme mønster som `pickPositionOnMap()` for ny
+  registrering, som redigeringsskjemaet aldri hadde. Breddegrad/lengdegrad
+  kan fortsatt skrives inn manuelt, men trenger ikke lenger å være eneste vei.
+
 ## 0.9.15 — Bedre grunnlag for å velge riktig KI-kandidat
 Svar på spørsmålet "hva slags informasjon fra Artsdatabanken kunne vært
 presentert for å gjøre det enklere å velge riktig, når KI foreslår flere

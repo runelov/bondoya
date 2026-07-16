@@ -184,8 +184,16 @@ function renderFinds(map, findsLayer, funn, activeFilter){
     .filter(f => !activeFilter || activeFilter === 'alle' || f.artstype === activeFilter)
     .forEach(f => {
       const color = ARTSTYPE_COLORS[f.artstype] || ARTSTYPE_COLORS.annet;
+      // bubblingMouseEvents: false — uten denne bobler et klikk på selve
+      // nålen videre til kartets EGET click-lyttepunkt (Leaflet sin
+      // standardoppførsel for Path-lag), som utløser BÅDE funn:selected
+      // (åpner dette funnets detaljpanel) OG en eventuell aktiv
+      // map.once('click', …) for posisjonsvalg (pickPositionOnMap/
+      // pickPositionForRediger) i samme klikk — sett position ved en
+      // feilklikk på et nærliggende funn mens man plasserer et annet.
       const marker = L.circleMarker([f.lat, f.lon], {
-        radius: 9, color, fillColor: color, fillOpacity: 0.85, weight: 2
+        radius: 9, color, fillColor: color, fillOpacity: 0.85, weight: 2,
+        bubblingMouseEvents: false
       });
 
       // Liten popup vises kun ved hover (mus) — ren stedsinfo, bevisst uten

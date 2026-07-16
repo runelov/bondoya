@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.15';
+const APP_VERSION = '0.9.16';
 const APP_BUILD_DATE = '2026-07-16';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -1799,6 +1799,7 @@ function renderRedigerFunnSkjema(funn){
     <input id="redigerLat" type="number" step="any">
     <label for="redigerLon">Lengdegrad</label>
     <input id="redigerLon" type="number" step="any">
+    <button id="redigerVelgPosisjonBtn" type="button" class="secondaryBtn">📍 Velg posisjon i kart</button>
     <label for="redigerTidspunkt">Tidspunkt</label>
     <input id="redigerTidspunkt" type="datetime-local">
     <div class="sheetActions">
@@ -1815,6 +1816,27 @@ function renderRedigerFunnSkjema(funn){
   el('redigerTidspunkt').value = toDatetimeLocalValue(new Date(funn.tidspunkt));
 
   el('avbrytRedigertBtn').addEventListener('click', () => { container.hidden = true; container.innerHTML = ''; });
+  el('redigerVelgPosisjonBtn').addEventListener('click', () => {
+    // Samme mønster som pickPositionOnMap() for ny registrering — feltene
+    // var tidligere kun rå tall-input, "klin umulig å flytte ved å endre
+    // koordinat-verdier" (bruker-tilbakemelding 2026-07-16). Nålens
+    // bubblingMouseEvents:false (map.js) sikrer at et klikk på en annen
+    // nål ikke også når dette map.once('click', …) samtidig.
+    if (!mapCtx) { showToast('Kartet er ikke tilgjengelig akkurat nå.'); return; }
+    toggleSheet('detailPanel', false);
+    showToast('Trykk i kartet der funnet skal flyttes til');
+    mapCtx.map.once('click', (e) => {
+      // Kan være null hvis brukeren rakk å klikke en annen nål i mellomtiden
+      // (åpner det funnets detaljpanel og bygger redigerFunnForm om/vekk) —
+      // se marker.on('click', …) i map.js.
+      const latInput = el('redigerLat');
+      const lonInput = el('redigerLon');
+      if (!latInput || !lonInput) return;
+      latInput.value = e.latlng.lat;
+      lonInput.value = e.latlng.lng;
+      toggleSheet('detailPanel', true);
+    });
+  });
   el('lagreRedigertBtn').addEventListener('click', async () => {
     const artNorsk = el('redigerArtNorsk').value.trim();
     if (!artNorsk) { el('redigerNote').textContent = 'Art (norsk navn) mangler.'; return; }
