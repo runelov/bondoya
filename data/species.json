@@ -4,7 +4,6 @@
     "latinsk": "Alces alces",
     "artstype": "pattedyr",
     "taxonId": 31241,
-    "beskrivelse": "Norges største landpattedyr. Uvanlig, men bekreftet forekommende på Bondøya — elg er en god svømmer og krysser av og til korte sund til kystnære øyer.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/31241",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -14,7 +13,6 @@
     "latinsk": "Somateria mollissima",
     "artstype": "fugl",
     "taxonId": 3491,
-    "beskrivelse": "Stor, kraftig bygd dykkand. Hannen er hvit/svart med lysegrønn nakke, hunnen brunspraglet. Hekker tallrikt på skjær og holmer i kystnære farvann.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3491",
     "rodlisteNorge": "VU",
     "synligForPublic": false
@@ -24,7 +22,6 @@
     "latinsk": "Anser anser",
     "artstype": "fugl",
     "taxonId": 3436,
-    "beskrivelse": "Norges vanligste gås. Gråbrun med rosa nebb og ben, hekker på holmer og i strandnær vegetasjon.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3436",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -34,7 +31,6 @@
     "latinsk": "Gulosus aristotelis",
     "artstype": "fugl",
     "taxonId": 203576,
-    "beskrivelse": "Mørk, glinsende skarv med tynt nebb og (om våren) en liten fjærtopp i pannen. Hekker i kolonier på bratte svaberg.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/203576",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -44,7 +40,6 @@
     "latinsk": "Phalacrocorax carbo",
     "artstype": "fugl",
     "taxonId": 3863,
-    "beskrivelse": "Større enn toppskarv, med gult ansiktsfelt og (hos voksne) hvit strupeflekk. Sees ofte sittende med utstrakte vinger for å tørke fjærdrakten.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3863",
     "rodlisteNorge": "NT",
     "synligForPublic": false
@@ -54,7 +49,6 @@
     "latinsk": "Cepphus grylle",
     "artstype": "fugl",
     "taxonId": 3562,
-    "beskrivelse": "Liten alkefugl, sort med store hvite vingefelt og knallrøde ben. Hekker i fjellsprekker og steinurer nær sjøen.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3562",
     "rodlisteNorge": "NT",
     "synligForPublic": false
@@ -64,7 +58,6 @@
     "latinsk": "Rissa tridactyla",
     "artstype": "fugl",
     "taxonId": 203546,
-    "beskrivelse": "Liten, elegant måke med korte, sorte ben og navnet etter lyden av lokkelåten. Hekker i tette kolonier på smale hyller i bratte fjell.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/203546",
     "rodlisteNorge": "EN",
     "synligForPublic": false
@@ -74,7 +67,6 @@
     "latinsk": "Larus argentatus",
     "artstype": "fugl",
     "taxonId": 3624,
-    "beskrivelse": "Stor, lys måke med rosa ben og gult nebb med rød flekk. Den vanligste store måken langs kysten.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3624",
     "rodlisteNorge": "VU",
     "synligForPublic": false
@@ -84,7 +76,6 @@
     "latinsk": "Larus marinus",
     "artstype": "fugl",
     "taxonId": 3640,
-    "beskrivelse": "Verdens største måke. Nesten sort overside, hvit underside, kraftig gult nebb. Toppredator blant sjøfuglene, tar gjerne egg og unger av andre arter.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3640",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -94,7 +85,6 @@
     "latinsk": "Larus canus",
     "artstype": "fugl",
     "taxonId": 3628,
-    "beskrivelse": "Middels stor måke, mindre og mer spinkel enn gråmåke, med grønngult (ikke rødflekket) nebb.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3628",
     "rodlisteNorge": "VU",
     "synligForPublic": false
@@ -104,7 +94,6 @@
     "latinsk": "Larus fuscus",
     "artstype": "fugl",
     "taxonId": 3631,
-    "beskrivelse": "Ligner gråmåke, men med mørk (skifergrå til sort) overside og gule ben. Trekkfugl som normalt overvintrer sørover.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3631",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -114,7 +103,6 @@
     "latinsk": "Haematopus ostralegus",
     "artstype": "fugl",
     "taxonId": 203529,
-    "beskrivelse": "Iøynefallende svart/hvit vadefugl med langt, rødt nebb og rosa ben. Vanlig og høylytt på strandenger og svaberg.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/203529",
     "rodlisteNorge": "NT",
     "synligForPublic": false
@@ -124,7 +112,6 @@
     "latinsk": "Branta canadensis",
     "artstype": "fugl",
     "taxonId": 3457,
-    "beskrivelse": "Innført art, stor gås med karakteristisk sort hals/hode og hvit «hakestropp». Ses stadig oftere langs norskekysten.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3457",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -134,7 +121,6 @@
     "latinsk": "Haliaeetus albicilla",
     "artstype": "fugl",
     "taxonId": 3815,
-    "beskrivelse": "Norges største rovfugl, med et vingespenn på over 2 meter. Standfugl i området, kjennetegnet ved korte, kileformede hvite stjertfjær hos voksne.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/3815",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -144,7 +130,6 @@
     "latinsk": "Phoca vitulina",
     "artstype": "sjøpattedyr",
     "taxonId": 31199,
-    "beskrivelse": "Den vanligste selarten langs norskekysten. Hviler ofte flokkvis på skjær og holmer ved lavvann, spraglete gråbrun pels.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/31199",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -154,7 +139,6 @@
     "latinsk": "Saccharina latissima",
     "artstype": "alge",
     "taxonId": 214548,
-    "beskrivelse": "Brunalge med langt, bølget, udelt blad. Danner tett tareskog i grunne, næringsrike kystfarvann og er viktig leveområde for mye annet marint liv.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/214548",
     "rodlisteNorge": null,
     "synligForPublic": true
@@ -164,7 +148,6 @@
     "latinsk": "Laminaria digitata",
     "artstype": "alge",
     "taxonId": 214542,
-    "beskrivelse": "Brunalge med bladet delt i fingerlignende flak. Vokser typisk grunnere enn sukkertare, ofte der bølgeeksponeringen er større.",
     "artskartUrl": "https://artskart.artsdatabanken.no/#taxon/214542",
     "rodlisteNorge": null,
     "synligForPublic": true

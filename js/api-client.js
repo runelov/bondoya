@@ -295,6 +295,29 @@ async function sokArter(term) {
   return res.json();
 }
 
+// Cache-aside artsomtale (admin-skrevet, eller Wikipedia som reserveløsning
+// — se worker/api/src/routes/arter.js). latinsk sendes med når kjent, slik
+// at serveren slipper et ekstra Artsdatabanken-oppslag bare for navnet.
+// Feiler bevisst aldri — samme "ikke-kritisk visningsdetalj"-resonnement
+// som sokArter().
+async function hentArtsbeskrivelse(taxonId, latinsk) {
+  const q = latinsk ? `?latinsk=${encodeURIComponent(latinsk)}` : '';
+  const res = await kall(`/arter/${taxonId}/beskrivelse${q}`);
+  if (!res.ok) return { beskrivelse: null, kilde: null };
+  return res.json();
+}
+
+async function settArtsbeskrivelse(taxonId, beskrivelse) {
+  const res = await kall(`/admin/arter/${taxonId}/beskrivelse`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ beskrivelse }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Kunne ikke lagre beskrivelsen (${res.status}).`);
+  return data;
+}
+
 // Bildet vises via <img src="...">, ikke fetch+blob: sesjonscookien er
 // SameSite=Lax og bondoya.no→api.bondoya.no er samme site (ulikt opphav),
 // så den sendes automatisk med et vanlig <img>-kall — samme resonnement som
@@ -342,5 +365,7 @@ window.ApiClient = {
   visArtIgjen,
   hentAdminDashboard,
   sokArter,
+  hentArtsbeskrivelse,
+  settArtsbeskrivelse,
   gjenkjennArt,
 };

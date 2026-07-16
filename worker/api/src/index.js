@@ -10,13 +10,14 @@ import {
   listAdminSider, opprettSide, oppdaterSide, slettSide,
   listInvitasjoner, opprettInvitasjon, slettInvitasjon,
   listSkjulteArter, skjulArt, visArtIgjen,
+  settArtsbeskrivelse,
   hentDashboard,
 } from './routes/admin.js';
 import { listFunnOffentlig, hentOffentligInnstillinger } from './routes/offentlig.js';
 import { hentFlis } from './routes/tiles.js';
 import { listSider, hentSide } from './routes/sider.js';
 import { sjekkInvitasjon, registrerMedInvitasjon } from './routes/invitasjoner.js';
-import { sokArter } from './routes/arter.js';
+import { sokArter, hentArtsbeskrivelse } from './routes/arter.js';
 import { gjenkjennArt } from './routes/ki.js';
 
 const router = createRouter();
@@ -33,6 +34,8 @@ router.get('/funn/offentlig', listFunnOffentlig);
 router.get('/offentlig/innstillinger', hentOffentligInnstillinger);
 router.get('/tiles/:z/:x/:y', hentFlis);
 router.get('/arter/sok', sokArter);
+router.get('/arter/:taxonId/beskrivelse', hentArtsbeskrivelse);
+router.patch('/admin/arter/:taxonId/beskrivelse', settArtsbeskrivelse);
 router.post('/ki/gjenkjenn', gjenkjennArt);
 router.get('/admin/brukere', listBrukere);
 router.patch('/admin/brukere/:id', oppdaterBrukerStatus);

@@ -114,6 +114,20 @@
     </div>
     <p id="artAdminNote" class="note"></p>
   </div>
+  <h2>Admin — artsomtale</h2>
+  <p class="hint">Skriv eller rediger artsomtalen som vises i funndetaljer. Uten en admin-skrevet omtale her, forsøker appen automatisk et sammendrag fra Wikipedia (merket som sådan) — det overskrives aldri automatisk av dette skjemaet før du selv lagrer noe.</p>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <label for="artsomtaleSokInput">Søk art (Artsdatabanken)</label>
+    <input id="artsomtaleSokInput" type="text" placeholder="f.eks. kamskjell" autocomplete="off">
+    <div id="artsomtaleSokResultater" class="speciesResults"></div>
+    <p id="artsomtaleValgtVisning" class="hint"></p>
+    <label for="artsomtaleTekstInput">Beskrivelse</label>
+    <textarea id="artsomtaleTekstInput" rows="4" maxlength="2000"></textarea>
+    <div class="sheetActions">
+      <button id="artsomtaleLagreBtn" class="primaryBtn" disabled>Lagre beskrivelse</button>
+    </div>
+    <p id="artsomtaleNote" class="note"></p>
+  </div>
   <h2>Admin — sider</h2>
   <div id="sideListeAdmin" class="findList"></div>
   <div id="sideSkjema" style="display:flex;flex-direction:column;gap:4px">

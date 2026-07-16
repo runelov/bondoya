@@ -312,6 +312,39 @@ export async function skjulArt({ request, env }) {
   return json(rad, 201, cors);
 }
 
+// Admin-skrevet artsomtale er alltid autoritativ og overskriver en
+// eventuell tidligere Wikipedia-hentet rad for samme taxonId (se
+// migrations/0015 og hentArtsbeskrivelse i routes/arter.js).
+export async function settArtsbeskrivelse({ request, env, params }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  const taxonId = parseInt(params.taxonId, 10);
+  if (!Number.isFinite(taxonId) || taxonId <= 0) return json({ error: 'Ugyldig taxonId.' }, 400, cors);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Ugyldig forespørsel.' }, 400, cors);
+  }
+
+  const beskrivelse = (body.beskrivelse || '').trim();
+  if (!beskrivelse) return json({ error: 'Beskrivelse mangler.' }, 400, cors);
+  if (beskrivelse.length > 2000) return json({ error: 'Beskrivelse er for lang.' }, 400, cors);
+
+  await env.DB.prepare(
+    `INSERT INTO arter_metadata (taxon_id, beskrivelse, kilde, wikipedia_url, oppdatert_av_bruker_id, oppdatert)
+     VALUES (?, ?, 'admin', NULL, ?, datetime('now'))
+     ON CONFLICT(taxon_id) DO UPDATE SET
+       beskrivelse = excluded.beskrivelse, kilde = 'admin', wikipedia_url = NULL,
+       oppdatert_av_bruker_id = excluded.oppdatert_av_bruker_id, oppdatert = datetime('now')`
+  ).bind(taxonId, beskrivelse, admin.id).run();
+
+  return json({ taxonId, beskrivelse, kilde: 'admin' }, 200, cors);
+}
+
 export async function visArtIgjen({ request, env, params }) {
   const cors = corsHeaders(env);
   const admin = await requireAdmin(request, env);

@@ -3,6 +3,7 @@ import { corsHeaders } from '../lib/cors.js';
 import { requireSession } from '../lib/session.js';
 import { sjekkOgTellIp } from '../lib/ratelimit.js';
 import { utledArtstype, ARTSKART_API } from '../lib/taxonomi.js';
+import { hentWikipediaSammendrag } from '../lib/wikipedia.js';
 
 // Live søkeproxy mot Artsdatabankens offentlige taxon-API — samme vert
 // fetch_artskart.py (bondoya-db) allerede bruker for taxon-ID-oppslag.
@@ -73,4 +74,46 @@ export async function sokArter({ request, env }) {
     }));
 
   return json(sorterEtterRelevans(treff, term).slice(0, MAKS_TREFF), 200, cors);
+}
+
+// Cache-aside artsomtale: admin-skrevet tekst i arter_metadata (migrations/
+// 0015) vinner alltid; uten en slik rad prøver vi Wikipedia én gang og
+// lagrer treffet for neste oppslag av samme art (delt på tvers av alle funn
+// av arten, ikke duplisert per funn — se migrasjonens kommentar for hvorfor).
+// ?latinsk sendes av klienten (allerede kjent fra funnet/søketreffet) for å
+// unngå et ekstra Artsdatabanken-oppslag her bare for å finne navnet.
+export async function hentArtsbeskrivelse({ request, env, params }) {
+  const cors = corsHeaders(env);
+  const bruker = await requireSession(request, env);
+  if (!bruker) return json({ error: 'Ikke innlogget.' }, 401, cors);
+
+  const taxonId = parseInt(params.taxonId, 10);
+  if (!Number.isFinite(taxonId) || taxonId <= 0) return json({ error: 'Ugyldig taxonId.' }, 400, cors);
+
+  const eksisterende = await env.DB.prepare(
+    'SELECT beskrivelse, kilde, wikipedia_url FROM arter_metadata WHERE taxon_id = ?'
+  ).bind(taxonId).first();
+  if (eksisterende) {
+    return json(
+      { beskrivelse: eksisterende.beskrivelse, kilde: eksisterende.kilde, wikipediaUrl: eksisterende.wikipedia_url },
+      200,
+      cors
+    );
+  }
+
+  const latinskNavn = (new URL(request.url).searchParams.get('latinsk') || '').trim();
+  const wiki = await hentWikipediaSammendrag(latinskNavn);
+  if (!wiki) return json({ beskrivelse: null, kilde: null, wikipediaUrl: null }, 200, cors);
+
+  // INSERT OR IGNORE-mønster (ON CONFLICT DO NOTHING): et samtidig kall for
+  // samme taxonId kan ha rukket å skrive først — admin-tekst skal aldri
+  // overskrives av dette, og to identiske Wikipedia-skriv er uskadelig å
+  // bare hoppe over.
+  await env.DB.prepare(
+    `INSERT INTO arter_metadata (taxon_id, beskrivelse, kilde, wikipedia_url)
+     VALUES (?, ?, 'wikipedia', ?)
+     ON CONFLICT(taxon_id) DO NOTHING`
+  ).bind(taxonId, wiki.beskrivelse, wiki.wikipediaUrl).run();
+
+  return json({ beskrivelse: wiki.beskrivelse, kilde: 'wikipedia', wikipediaUrl: wiki.wikipediaUrl }, 200, cors);
 }

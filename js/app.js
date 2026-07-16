@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.13';
+const APP_VERSION = '0.9.14';
 const APP_BUILD_DATE = '2026-07-16';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -42,6 +42,8 @@ let pendingArt = null; // { norsk, latinsk, artstype } — løftet ut av renderR
 // lokale closure-variabel, ellers nullstilles et manuelt artsvalg hver gang
 // panelet re-rendres (f.eks. etter at posisjon velges i kart), se pickPositionOnMap.
 let inviterToken = null; // satt av haandterInvitasjonFraUrl() hvis ?inviter=... er gyldig
+let artsbeskrivelseCache = new Map(); // taxonId -> {beskrivelse, kilde, wikipediaUrl}, unngår gjentatte oppslag i én sesjon
+let apentFunnId = null; // se lastArtsbeskrivelse() — luker ut et sent svar for et funn som ikke lenger vises
 
 // ---------- oppstart ----------
 
@@ -349,6 +351,7 @@ function wireAdminPanel(){
   });
 
   wireArtSok();
+  wireArtsomtaleSok();
 
   el('artSkjulBtn').addEventListener('click', async () => {
     const felter = {
@@ -512,6 +515,84 @@ function wireArtSok(){
         renderArtSokResultater(lokaleTreff, nyeTreff);
       }
     }, 300);
+  });
+}
+
+// ---------- admin: artsomtale ----------
+
+// Samme søkemønster som wireArtSok() over, men skriver til arter_metadata
+// (worker/api/src/routes/arter.js sin hentArtsbeskrivelse/settArtsbeskrivelse)
+// i stedet for skjulte_arter — se migrations/0015 for hvorfor dette er en
+// egen tabell fremfor et felt i data/species.json (delt per taxonId på
+// tvers av alle funn av arten, ikke duplisert per funn eller begrenset til
+// en kuratert liste).
+function wireArtsomtaleSok(){
+  let valgtTaxonId = null;
+  let valgtLatinsk = '';
+  let valgtNorsk = '';
+
+  function renderResultater(lokale, eksterne){
+    const alle = [...lokale, ...eksterne];
+    el('artsomtaleSokResultater').innerHTML =
+      lokale.map((s, i) => speciesResultButtonHtml(s, i)).join('') +
+      (eksterne.length ? '<p class="hint speciesResultsHint">Flere treff</p>' : '') +
+      eksterne.map((s, i) => speciesResultButtonHtml(s, lokale.length + i)).join('');
+
+    el('artsomtaleSokResultater').querySelectorAll('.speciesResult').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const s = alle[Number(btn.dataset.i)];
+        valgtTaxonId = s.taxonId;
+        valgtLatinsk = s.latinsk;
+        valgtNorsk = s.norsk;
+        el('artsomtaleSokResultater').innerHTML = '';
+        el('artsomtaleSokInput').value = s.norsk;
+        el('artsomtaleValgtVisning').textContent = `Valgt: ${s.norsk} (taxonId ${s.taxonId}) — henter gjeldende omtale …`;
+        el('artsomtaleLagreBtn').disabled = false;
+        el('artsomtaleTekstInput').value = '';
+
+        const gjeldende = await window.ApiClient.hentArtsbeskrivelse(valgtTaxonId, valgtLatinsk);
+        el('artsomtaleValgtVisning').textContent = gjeldende.beskrivelse
+          ? `Valgt: ${s.norsk} (taxonId ${s.taxonId}) — gjeldende kilde: ${gjeldende.kilde === 'wikipedia' ? 'Wikipedia (auto)' : 'admin'}`
+          : `Valgt: ${s.norsk} (taxonId ${s.taxonId}) — ingen omtale ennå`;
+        el('artsomtaleTekstInput').value = gjeldende.beskrivelse || '';
+      });
+    });
+  }
+
+  let sokTimer = null;
+  el('artsomtaleSokInput').addEventListener('input', (ev) => {
+    const rawTerm = ev.target.value.trim();
+    const term = rawTerm.toLowerCase();
+    const lokaleTreff = term.length < 2 ? [] : speciesCache.filter(s =>
+      s.norsk.toLowerCase().includes(term) || s.latinsk.toLowerCase().includes(term)
+    ).slice(0, 6);
+    renderResultater(lokaleTreff, []);
+
+    clearTimeout(sokTimer);
+    if (term.length < 2) return;
+    sokTimer = setTimeout(async () => {
+      const eksterneTreff = await window.ApiClient.sokArter(rawTerm);
+      const lokaleNavn = new Set(lokaleTreff.map(s => s.norsk.toLowerCase()));
+      const nyeTreff = eksterneTreff.filter(s => !lokaleNavn.has(s.norsk.toLowerCase()));
+      if (el('artsomtaleSokInput').value.trim().toLowerCase() === term) {
+        renderResultater(lokaleTreff, nyeTreff);
+      }
+    }, 300);
+  });
+
+  el('artsomtaleLagreBtn').addEventListener('click', async () => {
+    const tekst = el('artsomtaleTekstInput').value.trim();
+    if (!valgtTaxonId) { el('artsomtaleNote').textContent = 'Velg en art først.'; return; }
+    if (!tekst) { el('artsomtaleNote').textContent = 'Skriv en beskrivelse først.'; return; }
+    el('artsomtaleNote').textContent = 'Lagrer …';
+    try {
+      await window.ApiClient.settArtsbeskrivelse(valgtTaxonId, tekst);
+      artsbeskrivelseCache.delete(valgtTaxonId); // neste visning av et funn av arten skal hente den ferske teksten
+      el('artsomtaleNote').textContent = 'Lagret.';
+      el('artsomtaleValgtVisning').textContent = `Valgt: ${valgtNorsk} (taxonId ${valgtTaxonId}) — gjeldende kilde: admin`;
+    } catch (e) {
+      el('artsomtaleNote').textContent = 'Feil: ' + e.message;
+    }
   });
 }
 
@@ -1595,6 +1676,7 @@ function renderList(){
 // Bildet vises direkte via <img src>, ikke fetch+blob+objectURL — sesjons-
 // cookien sendes automatisk (samme site, se api-client.js sin bildeUrl()).
 async function openDetail(funn){
+  apentFunnId = funn.id; // se lastArtsbeskrivelse() — luker ut et sent svar for et funn som ikke lenger vises
   const s = speciesCache.find(sp => sp.latinsk === funn.art?.latinsk) || {};
   const count = nearbyCountFor(funn.art?.norsk || '');
 
@@ -1616,7 +1698,7 @@ async function openDetail(funn){
     <h2>${escapeHtml(funn.art?.norsk || 'Ukjent art')}</h2>
     <p><em>${escapeHtml(funn.art?.latinsk || s.latinsk || '')}</em></p>
     ${rodlisteBadge(s.rodlisteNorge)}
-    ${s.beskrivelse ? `<p>${escapeHtml(s.beskrivelse)}</p>` : ''}
+    <div id="artsbeskrivelseWrap"></div>
     ${count ? `<p class="hint">Registrert ${count} ganger i nærheten før (Artskart).</p>` : ''}
     <p>Registrert: ${new Date(funn.tidspunkt).toLocaleString('no-NO')}${funn.registrertAv ? ' av ' + escapeHtml(funn.registrertAv) : ''}</p>
     ${artskartUrl ? `<a href="${escapeHtml(artskartUrl)}" target="_blank" rel="noopener">Se på Artsdatabanken →</a>` : ''}
@@ -1627,6 +1709,7 @@ async function openDetail(funn){
       </div>
       <div id="redigerFunnForm" hidden></div>` : ''}`;
   toggleSheet('detailPanel', true);
+  lastArtsbeskrivelse(funn);
 
   if (funn.erEgenRegistrering) el('redigerFunnBtn').addEventListener('click', () => renderRedigerFunnSkjema(funn));
   if (!funn.kanSlette) return;
@@ -1642,6 +1725,30 @@ async function openDetail(funn){
       showToast('Kunne ikke slette: ' + e.message);
     }
   });
+}
+
+// Hentes async ETTER at panelet allerede vises (ikke await'et i openDetail)
+// — artsomtale er en ren visningsdetalj, ikke noe som skal forsinke at
+// funndetaljene dukker opp. apentFunnId-sjekken luker ut et sent svar hvis
+// brukeren rakk å åpne et annet funn før dette resultatet kom tilbake.
+async function lastArtsbeskrivelse(funn){
+  const wrap = el('artsbeskrivelseWrap');
+  const taxonId = funn.art?.taxonId;
+  if (!taxonId || !wrap) return;
+
+  let resultat = artsbeskrivelseCache.get(taxonId);
+  if (!resultat) {
+    resultat = await window.ApiClient.hentArtsbeskrivelse(taxonId, funn.art.latinsk);
+    artsbeskrivelseCache.set(taxonId, resultat);
+  }
+  if (apentFunnId !== funn.id) return;
+  if (!wrap.isConnected || !resultat.beskrivelse) return;
+
+  wrap.innerHTML = `
+    <p>${escapeHtml(resultat.beskrivelse)}</p>
+    ${resultat.kilde === 'wikipedia'
+      ? `<p class="hint">Kilde: <a href="${escapeHtml(resultat.wikipediaUrl || '#')}" target="_blank" rel="noopener">Wikipedia</a></p>`
+      : ''}`;
 }
 
 const REDIGERBARE_ARTSTYPER = ARTSTYPER;

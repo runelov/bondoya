@@ -1,5 +1,35 @@
 # Endringslogg
 
+## 0.9.14 — Artsomtale for alle arter, ikke bare de 17 kuraterte
+Direkte oppfølging av 0.9.13: "kun 17 arter har beskrivelse" var aldri
+intensjonen, bare en bieffekt av at `data/species.json` sitt `beskrivelse`-
+felt (håndskrevet av utvikleren — bekreftet 2026-07-16 at Artsdatabankens
+taxon-API ikke har noe fritekstfelt i det hele tatt) var eneste kilde.
+
+- **Ny `arter_metadata`-tabell** (migrations/0015), nøklet på taxonId — delt
+  på tvers av alle funn av samme art, ikke duplisert per funn og ikke lenger
+  begrenset til en kuratert liste. De 17 opprinnelige beskrivelsene er
+  overført hit som kilde `admin` (fjernet fra `species.json`).
+- **Wikipedia som reserveløsning** når ingen admin har skrevet en omtale:
+  `worker/api/src/lib/wikipedia.js` slår opp det latinske navnet mot norsk
+  Wikipedias summary-API (fungerer overraskende pålitelig som sidetittel —
+  verifisert mot gråmåke/taskekrabbe/hoggorm). Rene stubb-artikler (extract
+  under 40 tegn — sett i praksis for taskekrabbe) forkastes som "ikke
+  funnet" fremfor å vise nær-tomme setninger. Cache-aside: lagres i
+  `arter_metadata` ved første oppslag, gjenbrukes deretter.
+- **Admin-skrevet tekst er alltid autoritativ** og overskriver en tidligere
+  Wikipedia-hentet rad — ny GET `/arter/:taxonId/beskrivelse` (alle
+  innloggede) og PATCH `/admin/arter/:taxonId/beskrivelse` (admin), nytt
+  "Admin — artsomtale"-panel i appen for å skrive/redigere.
+- Funndetaljvisningen henter nå omtalen asynkront ETTER at panelet vises
+  (ikke en blokkerende del av åpningen) — en klientside-cache
+  (`artsbeskrivelseCache`) unngår gjentatte oppslag for samme art i én
+  økt, og en "hvilket funn er faktisk åpent nå"-sjekk luker ut et sent svar
+  hvis brukeren rekker å åpne et annet funn i mellomtiden.
+
+**Krever migrasjon på produksjon før deploy**: `cd worker/api && npm run
+db:migrate:remote` (migrasjon 0015).
+
 ## 0.9.13 — TaxonId ble aldri lagret, sju nye artstyper, artstype-utledning flyttet server-side
 Funnet ved gjennomgang av "Annet"-kategoriserte funn 2026-07-16 (se
 0.9.10-notatet om kamskjell/taskekrabbe): en dypere sjekk avdekket at
