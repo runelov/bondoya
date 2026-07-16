@@ -1,5 +1,52 @@
 # Endringslogg
 
+## 0.9.23 — Service worker: nettverk-først i stedet for stale-while-revalidate
+Svar på "gråmåke viser ingen artsomtale" — data var korrekt både i
+produksjons-D1 og via direkte API-kall (verifisert mot lokal dev med
+identisk data), så bugen var ikke server-side i det hele tatt.
+
+**Rotårsak**: `sw.js` sin fetch-lytter brukte cache-først med bakgrunns-
+oppdatering ("stale-while-revalidate") — `caches.match(...).then(cached =>
+{ ... return cached || network; })`. En allerede-cachet nettleser fikk
+alltid den FORRIGE versjonen av f.eks. `js/app.js` umiddelbart, mens en
+fersk versjon kun ble hentet i bakgrunnen for å oppdatere cachen til NESTE
+sidelasting — et helt deploy alltid ett steg bak, uansett hvor mange ganger
+siden ble lastet på nytt etter en ny utrulling. Konkret: ni deploys etter at
+artsomtale-funksjonen (0.9.14) ble lagt til, kjørte nettleseren fortsatt en
+`js/app.js` cachet fra før den fantes.
+
+Byttet til nettverk-først, cache kun som offline-reserve (henter `fetch()`
+først; faller kun tilbake til `caches.match()` når selve nettverkskallet
+feiler) — dette var uansett den opprinnelige hensikten med denne service
+workeren ("at app-skallet laster selv uten nett"), ikke ytelsesoptimalisering.
+`CACHE_NAME` bumpet til v2 for å gi eksisterende installerte service workers
+en ren start. Verifisert lokalt: reload gir nå faktiske nettverkskall
+(200/304) til serveren for alle skallfiler, ikke stille cache-svar.
+
+**Merk for deg akkurat nå**: dette fikser det for FREMTIDIGE deploys — for
+å se gjeldende artsomtale-funksjon med det samme, kjør DevTools → Application
+→ Service Workers → Unregister, og last siden på nytt.
+
+## 0.9.22 — Slett bruker-feedback, aktivert/registrert på dashbordet
+Svar på "Slett permanent ser ikke ut til å slette?" + "dashbordet mangler
+skillet mellom registrert og aktivert".
+
+- **Rotårsak til "ser ikke ut til å slette"**: `slettBrukerPermanent()`
+  virket helt korrekt server-side hele tiden (verifisert direkte mot D1:
+  e-post skrubbes, status settes til deaktivert, slettet_tidspunkt settes —
+  kan ikke hardslettes uten å brekke `funn` sin fremmednøkkel, se
+  `admin.js` sin eksisterende kommentar). Problemet var at raden ble
+  liggende igjen i akkurat samme liste med bare én liten tekstendring
+  ("aktiv" → "permanent slettet") og ingen bekreftelse — så ut som
+  ingenting skjedde. To fikser i `renderBrukerListe()`:
+  - permanent slettede brukere skjules nå som standard, med en
+    "Vis N slettede"/"Skjul"-veksleknapp for å se dem ved behov
+  - manglet helt en suksess-toast ved sletting — la til "Bruker slettet."
+- **Dashbordet manglet aktivert/registrert-skillet** som allerede fantes i
+  selve brukerlisten (0.9.20) — lagt til to nye stat-kort ("Aktiverte" /
+  "Ikke aktivert") i Brukere-seksjonen, fra en ny `aktiverte`-kolonne i
+  `hentDashboard()` sin SQL.
+
 ## 0.9.21 — robots.txt: blokkerer all crawling
 Bondøya er en ettsides app for en avgrenset krets, ikke et innholdssted som
 skal ha søkemotorsynlighet. Ny `robots.txt` (repo-rot, samme nivå som

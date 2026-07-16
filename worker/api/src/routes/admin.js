@@ -390,7 +390,8 @@ export async function hentDashboard({ request, env }) {
       `SELECT COUNT(*) AS totalt,
               COALESCE(SUM(CASE WHEN status = 'aktiv' THEN 1 ELSE 0 END), 0) AS aktive,
               COALESCE(SUM(CASE WHEN status = 'deaktivert' THEN 1 ELSE 0 END), 0) AS deaktiverte,
-              COALESCE(SUM(CASE WHEN rolle = 'admin' THEN 1 ELSE 0 END), 0) AS admins
+              COALESCE(SUM(CASE WHEN rolle = 'admin' THEN 1 ELSE 0 END), 0) AS admins,
+              COALESCE(SUM(CASE WHEN aktivert_tidspunkt IS NOT NULL THEN 1 ELSE 0 END), 0) AS aktiverte
        FROM brukere WHERE slettet_tidspunkt IS NULL`
     ).first(),
     env.DB.prepare(

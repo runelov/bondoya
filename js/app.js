@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.21';
+const APP_VERSION = '0.9.23';
 const APP_BUILD_DATE = '2026-07-16';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -44,6 +44,7 @@ let pendingArt = null; // { norsk, latinsk, artstype } — løftet ut av renderR
 let inviterToken = null; // satt av haandterInvitasjonFraUrl() hvis ?inviter=... er gyldig
 let artsbeskrivelseCache = new Map(); // taxonId -> {beskrivelse, kilde, wikipediaUrl}, unngår gjentatte oppslag i én sesjon
 let apentFunnId = null; // se lastArtsbeskrivelse() — luker ut et sent svar for et funn som ikke lenger vises
+let visSlettedeBrukere = false; // se renderBrukerListe() — permanent slettede skjules som standard
 
 // ---------- oppstart ----------
 
@@ -428,6 +429,8 @@ async function renderAdminDashboard(){
       ${statKort(d.brukere.aktive, 'Aktive')}
       ${statKort(d.brukere.deaktiverte, 'Deaktiverte')}
       ${statKort(d.brukere.admins, 'Admin')}
+      ${statKort(d.brukere.aktiverte, 'Aktiverte')}
+      ${statKort(d.brukere.totalt - d.brukere.aktiverte, 'Ikke aktivert')}
     </div>
     <h3>Funn</h3>
     <div class="statGrid">
@@ -872,7 +875,20 @@ async function renderBrukerListe(){
     return;
   }
 
-  container.innerHTML = brukere.map((b) => {
+  // Permanent slettede brukere blir aldri fjernet fra tabellen — kun
+  // e-post-skrubbet (se slettBrukerPermanent() i worker/api: funn sin
+  // fremmednøkkel til bruker-id ville brukket ellers) — og har ingen
+  // videre handlinger tilgjengelig. Skjules derfor som standard: uten
+  // dette forble raden liggende i akkurat samme liste med bare en liten
+  // tekstendring, som gjorde en vellykket sletting umulig å se
+  // ("ser ikke ut til å slette", tilbakemelding 2026-07-16).
+  const slettede = brukere.filter(b => b.slettet_tidspunkt);
+  const synlige = visSlettedeBrukere ? brukere : brukere.filter(b => !b.slettet_tidspunkt);
+
+  const toggleHtml = slettede.length
+    ? `<button id="brukerVisSlettedeBtn" class="linkBtn">${visSlettedeBrukere ? 'Skjul' : 'Vis'} ${slettede.length} slettet${slettede.length === 1 ? '' : 'e'}</button>`
+    : '';
+  const listeHtml = synlige.map((b) => {
     const slettetPermanent = !!b.slettet_tidspunkt;
     // /meg returnerer ikke bruker-id, kun epost/kortnavn/rolle — sammenlign på
     // epost i stedet (unikt, og uendret for innlogget admin siden
@@ -893,6 +909,15 @@ async function renderBrukerListe(){
         </div>
       </div>`;
   }).join('') || '<p class="hint">Ingen brukere.</p>';
+  container.innerHTML = toggleHtml + listeHtml;
+
+  const brukerVisSlettedeBtn = el('brukerVisSlettedeBtn');
+  if (brukerVisSlettedeBtn) {
+    brukerVisSlettedeBtn.addEventListener('click', () => {
+      visSlettedeBrukere = !visSlettedeBrukere;
+      renderBrukerListe();
+    });
+  }
 
   container.querySelectorAll('[data-handling="status"]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -909,6 +934,7 @@ async function renderBrukerListe(){
       if (!confirm('Slette denne brukeren permanent? E-posten fjernes for godt — kan ikke angres.')) return;
       try {
         await window.ApiClient.slettBrukerPermanent(btn.dataset.id);
+        showToast('Bruker slettet.');
         await renderBrukerListe();
       } catch (e) {
         showToast('Feil: ' + e.message);

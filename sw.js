@@ -2,7 +2,11 @@
 // (HTML/CSS/JS/manifest/ikoner) laster selv uten nett. All ekte data (GitHub
 // API, Mapbox-fliser, KI-proxy) går alltid rett til nettverket, uberørt.
 
-const CACHE_NAME = 'bondoya-shell-v1';
+// v2: bytt fra cache-først til nettverk-først (se fetch-lytteren under for
+// hvorfor) — ny cache-versjon her sørger for at gamle, "stale-while-
+// revalidate"-cachede nettlesere får en ren start i stedet for å arve noe
+// som ble lagret under den forrige, feilaktige strategien.
+const CACHE_NAME = 'bondoya-shell-v2';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -38,20 +42,29 @@ self.addEventListener('fetch', (event) => {
   const isShellRequest = isSameOrigin && event.request.method === 'GET';
   if (!isShellRequest) return; // la alt annet (API-kall, kartfliser) gå rett til nett
 
+  // Nettverk først, cache kun som offline-reserve — IKKE cache-først med
+  // bakgrunnsoppdatering ("stale-while-revalidate"). Med cache-først ble
+  // en allerede-cachet, EKTE nettleser alltid tjent den forrige versjonen
+  // av f.eks. js/app.js umiddelbart, mens en fersk versjon kun ble hentet
+  // i bakgrunnen for å oppdatere cachen til NESTE sidelasting — et helt
+  // deploy alltid ett steg bak, uansett hvor mange ganger siden ble lastet
+  // på nytt etter en ny utrulling (konkret observert 2026-07-16: en admin
+  // så ikke en artsomtale-funksjon fra 0.9.14, ni deploys senere, fordi
+  // nettleseren fortsatt kjørte en js/app.js cachet fra før den). Med
+  // nettverk-først får en online bruker alltid siste versjon; cachen
+  // brukes kun når selve nettverkskallet feiler (reelt offline), som var
+  // hele den opprinnelige hensikten med denne service workeren.
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const network = fetch(event.request).then(res => {
-        // .clone() MÅ skje synkront her, før res sendes videre — kloner vi
-        // den først etter at caches.open() (asynkront) er ferdig, kan
-        // responsens body allerede ha begynt å bli konsumert av siden selv,
-        // og clone() feiler med "Response body is already used".
-        if (res.ok) {
-          const cacheCopy = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, cacheCopy));
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request).then(res => {
+      // .clone() MÅ skje synkront her, før res sendes videre — kloner vi
+      // den først etter at caches.open() (asynkront) er ferdig, kan
+      // responsens body allerede ha begynt å bli konsumert av siden selv,
+      // og clone() feiler med "Response body is already used".
+      if (res.ok) {
+        const cacheCopy = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(event.request, cacheCopy));
+      }
+      return res;
+    }).catch(() => caches.match(event.request))
   );
 });
