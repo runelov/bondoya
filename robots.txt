@@ -1,0 +1,20 @@
+# Bondøya er en ettsides app (SPA) for en avgrenset krets — ikke et
+# innholdsnettsted som skal ha søkemotorsynlighet. Alt trafikk til
+# bondoya.no går til samme index.html uansett sti; det finnes ingen
+# separate, meningsfulle undersider å skille mellom for en robot.
+#
+# Blokkerer alt, av tre grunner:
+# 1. Det "offentlige laget" (funn synlig for uinnloggede, se konsept.md
+#    "Offentlig lag") er ment for kjente besøkende med lenken, ikke for
+#    at søkemotorer skal indeksere og gjengi geolokasjon for artsfunn —
+#    samme forsiktighetsprinsipp som allerede håndheves server-side for
+#    rødlistede arter (synlig_for_public), utvidet til å gjelde crawling
+#    generelt.
+# 2. Invitasjonslenker bruker et engangs-token i URL-en (?inviter=<token>
+#    på samme rot-URL) — bør aldri crawles, caches eller havne i en
+#    robots historikk/indeks.
+# 3. api.bondoya.no og ki.bondoya.no (Cloudflare Workers) er egne
+#    opphav med sin egen robots.txt-vurdering — denne filen gjelder kun
+#    det statiske grensesnittet på bondoya.no.
+User-agent: *
+Disallow: /

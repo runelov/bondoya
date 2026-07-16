@@ -1,5 +1,19 @@
 # Endringslogg
 
+## 0.9.21 — robots.txt: blokkerer all crawling
+Bondøya er en ettsides app for en avgrenset krets, ikke et innholdssted som
+skal ha søkemotorsynlighet. Ny `robots.txt` (repo-rot, samme nivå som
+`index.html`/`CNAME`) blokkerer alle roboter fullstendig (`Disallow: /`),
+av tre grunner: (1) det offentlige laget (funn synlig for uinnloggede) er
+ment for kjente besøkende med lenken, ikke for at søkemotorer skal
+indeksere/gjengi geolokasjon for artsfunn — samme forsiktighetsprinsipp som
+allerede håndheves server-side for rødlistede arter, utvidet til crawling
+generelt; (2) invitasjonslenker bærer et engangs-token i URL-en
+(`?inviter=<token>`) som aldri bør crawles eller havne i en robots indeks;
+(3) siden appen er en SPA uten separate undersider, er det uansett ingenting
+å skille mellom for en robot — hele nettstedet er ett dokument.
+`api.bondoya.no`/`ki.bondoya.no` er egne opphav, utenfor denne filens omfang.
+
 ## 0.9.20 — Skiller "registrert" fra "aktivert" i brukerlisten
 Svar på "skille mellom registrert og aktivert status på brukere? Med
 aktivert mener jeg at de selv har lagt inn eposten sin i appen, og trigget
