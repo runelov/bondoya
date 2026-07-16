@@ -42,9 +42,9 @@
     <p class="hint">Skriv inn e-posten din, så sender vi deg en innloggingslenke. Du må være invitert fra før for at dette skal fungere.</p>
     <label for="loginEpost">E-post</label>
     <input id="loginEpost" type="email" autocomplete="email" placeholder="din@epost.no">
-    <div class="cf-turnstile" id="turnstileWidget" data-sitekey="0x4AAAAAAD0CP4TI_K966Yw7"></div>
+    <div class="cf-turnstile" id="turnstileWidget" data-sitekey="0x4AAAAAAD0CP4TI_K966Yw7" data-callback="onTurnstileVerified" data-expired-callback="onTurnstileExpired" data-error-callback="onTurnstileExpired"></div>
     <div class="sheetActions">
-      <button id="loginSendBtn" class="primaryBtn">Send innloggingslenke</button>
+      <button id="loginSendBtn" class="primaryBtn" disabled>Send innloggingslenke</button>
     </div>
     <p id="loginNote" class="note"></p>
   </div>

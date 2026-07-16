@@ -1,5 +1,24 @@
 # Endringslogg
 
+## 0.9.12 — Fjernet falsk 401-konsollfeil for besøkende, tydeligere pålogging-CTA, Turnstile-knapp låst til utfordring er løst
+Funnet ved funksjonell testing 2026-07-16.
+
+- **`/meg` logget en rød 401-konsollfeil for HVER offentlig besøkende**,
+  selv om appen selv håndterte det helt fint — ingen innlogget bruker er en
+  normal, forventet tilstand for en statussjekk-rute, ikke en feilsituasjon.
+  `/meg` svarer nå alltid 200, med `{loggedIn: false}` for uinnloggede (se
+  `worker/api/src/routes/meg.js` og `js/api-client.js`).
+- **"Tilkoblet"-pillen forsvant helt for besøkende** i stedet for å invitere
+  til pålogging — viser nå "Logg på for artsobservasjoner" når ingen er
+  innlogget (`updateSyncPill()` i `js/app.js`).
+- **"Send innloggingslenke"-knappen kunne klikkes før Turnstile-utfordringen
+  var løst**, og feilet da uansett server-side. Knappen starter nå disabled
+  og aktiveres kun via Turnstile sin `data-callback`/`data-expired-callback`
+  (`index.html`, `js/app.js`).
+
+**Krever deploy av `worker/api`, ikke bare den statiske appen** — 401-fiksen
+har ingen effekt i produksjon før Workeren er redeployet.
+
 ## 0.9.11 — Versjonsnummer synlig for alle, Artsdatabanken-lenke på alle funn
 Funnet ved funksjonell testing 2026-07-13.
 

@@ -13,12 +13,17 @@ async function kall(sti, opts) {
 }
 
 // Returnerer innlogget bruker ({epost, kortnavn, rolle}), eller null hvis
-// ikke innlogget. Kastes bevisst ikke som feil — 401 er en normal, forventet
-// tilstand (f.eks. ved appstart før innlogging), ikke en unntakssituasjon.
+// ikke innlogget. /meg svarer alltid 200 (aldri 401) for "ikke innlogget" —
+// det er en normal, forventet tilstand for en statussjekk-rute (f.eks. ved
+// appstart, eller enhver offentlig besøkende), ikke en feilsituasjon. Med
+// 401 logget nettleserens DevTools automatisk en rød konsollfeil for HVER
+// offentlig besøkende, uavhengig av at appen selv håndterte det helt fint
+// (se worker/api/src/routes/meg.js).
 async function meg() {
   const res = await kall('/meg');
   if (!res.ok) return null;
-  return res.json();
+  const data = await res.json();
+  return data.loggedIn ? { epost: data.epost, kortnavn: data.kortnavn, rolle: data.rolle } : null;
 }
 
 async function beOmLenke(epost, turnstileToken) {

@@ -2,8 +2,8 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.11';
-const APP_BUILD_DATE = '2026-07-13';
+const APP_VERSION = '0.9.12';
+const APP_BUILD_DATE = '2026-07-16';
 
 const el = id => document.getElementById(id);
 
@@ -170,6 +170,13 @@ async function refreshFromRepo(){
 
 // ---------- konto / innlogging ----------
 
+// Turnstile sitt data-callback/data-expired-callback (index.html) — knappen
+// starter disabled i markup, siden beOmLenke() uten gyldig token uansett
+// bare feiler server-side; å holde den disabled til utfordringen er løst
+// unngår at brukeren rekker å klikke før den er klar.
+window.onTurnstileVerified = () => { el('loginSendBtn').disabled = false; };
+window.onTurnstileExpired = () => { el('loginSendBtn').disabled = true; };
+
 function wireAccountPanel(){
   el('accountToggle').addEventListener('click', async () => {
     toggleSheet('accountPanel');
@@ -188,6 +195,7 @@ function wireAccountPanel(){
       el('loginNote').textContent = 'Feil: ' + e.message;
     } finally {
       if (window.turnstile && window.turnstile.reset) window.turnstile.reset();
+      el('loginSendBtn').disabled = true;
     }
   });
 
@@ -841,8 +849,8 @@ function wireSetupPanel(){
 // kjører — etterspurt 2026-07-13.
 function updateSyncPill(){
   const pill = el('syncStatus');
-  if (!brukerCache) { pill.hidden = true; return; }
   pill.hidden = false;
+  if (!brukerCache) { pill.textContent = 'Logg på for artsobservasjoner'; return; }
   pill.textContent = `${navigator.onLine ? '🟢 Tilkoblet' : '🟡 Offline'} · v${APP_VERSION}`;
 }
 
