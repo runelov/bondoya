@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.25';
+const APP_VERSION = '0.9.26';
 const APP_BUILD_DATE = '2026-07-19';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('online', () => { updateSyncPill(); trySync(); });
   window.addEventListener('offline', updateSyncPill);
-  el('syncStatus').addEventListener('click', () => trySync());
+  el('syncStatus').addEventListener('click', handleSyncPillClick);
   updateSyncPill();
   trySync();
   // Sikkerhetsnett: uten dette ble et køet funn stående uendret i timevis
@@ -997,6 +997,28 @@ function updateSyncPill(){
   pill.hidden = false;
   if (!brukerCache) { pill.textContent = 'Logg på for artsobservasjoner'; return; }
   pill.textContent = `${navigator.onLine ? '🟢 Tilkoblet' : '🟡 Offline'} · v${APP_VERSION}`;
+}
+
+// Elementer lagt i køen FØR ArrayBuffer-omleggingen i offline-queue.js kan
+// ha en Blob som permanent har mistet sin backing store (se queueAdd() sin
+// kommentar) — de vil aldri klare å synke uansett hvor mange ganger
+// trySync() kjøres. Uten en vei ut ville et slikt element blitt stående og
+// prøvd på nytt hvert 5. minutt i det uendelige. Kun tilbudt når det
+// FAKTISK har feilet minst én gang (ikke for elementer som bare venter på
+// sitt første forsøk, f.eks. rett etter at man la et funn i kø offline).
+async function handleSyncPillClick(){
+  const items = await window.OfflineQueue.queueAll();
+  const feilet = items.filter(i => i.status === 'feilet');
+  if (feilet.length === 0) { trySync(); return; }
+
+  const provIgjen = confirm(
+    `${feilet.length} funn kunne ikke synkes. Trykk OK for å prøve igjen, eller Avbryt for å forkaste dem permanent (funnet går da tapt og må registreres på nytt).`
+  );
+  if (provIgjen) { trySync(); return; }
+
+  for (const item of feilet) await window.OfflineQueue.queueRemove(item.localId);
+  showToast(`${feilet.length} funn forkastet.`);
+  renderQueueBadge();
 }
 
 async function trySync(){

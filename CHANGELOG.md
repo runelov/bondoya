@@ -1,5 +1,34 @@
 # Endringslogg
 
+## 0.9.26 — Køede funn med bilde kunne feile synk permanent på iOS Safari
+Oppfølging av 0.9.25 sin synk-retry-fiks: brukertilbakemelding samme dag
+viste at ett funn fortsatt feilet ved hvert eneste synk-forsøk (automatisk
+og manuelt via den nye "trykk for å prøve igjen"-pillen), med feilmeldingen
+"Load failed" — på iPhone/iPad Safari, med god forbindelse. Det utelukker en
+forbigående nettverksfeil (som ville gitt varierende resultat) og en
+serverfeil (som ville gitt en egen feilmelding fra Workeren via
+`data.error`, ikke "Load failed", som er `fetch()` sin egen melding når
+selve nettverkskallet aldri fikk noe svar).
+
+**Rotårsak**: `offline-queue.js` lagret bildet som et rått `Blob`-objekt
+direkte i IndexedDB. Safari/WebKit har en kjent svakhet der en slik Blob,
+hentet ut igjen etter at fanen har ligget i bakgrunnen en stund, kan ha
+mistet sin underliggende backing store — en `fetch()` med en slik "død"
+Blob i et FormData-body feiler da lokalt i nettleseren, uansett hvor mange
+ganger man prøver eller hvor bra nettet er. Fikset ved å lagre bildet som
+`ArrayBuffer` i køen i stedet (ingen tilsvarende backing-store-avhengighet),
+og bygge det opp igjen til en fersk `Blob` rett før bruk i `syncQueue()`.
+Bakoverkompatibelt med elementer som allerede ligger i køen fra før denne
+fiksen (faller tilbake til det gamle `imageBlob`-feltet hvis
+`imageBlobBuffer` mangler) — men et element som ALLEREDE har en død Blob
+lagret fra før fiksen kan ikke reddes retroaktivt.
+
+For de tilfellene er det lagt til en forkast-mulighet: hvis synk-pillen
+viser "feilet" og man trykker på den, spør appen (via `confirm()`) om man
+vil prøve igjen eller forkaste de feilede elementene permanent — uten dette
+ville et element med en permanent død Blob blitt stående og prøvd på nytt
+hvert 5. minutt i det uendelige uten noen vei ut.
+
 ## 0.9.25 — Aktivert-status for invitasjonsbrukere, og synk-kø som satt seg fast
 To relaterte funn fra brukertilbakemelding 2026-07-19.
 

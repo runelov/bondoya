@@ -24,6 +24,18 @@ async function queueAdd(entry){
   const db = await openDb();
   entry.localId = entry.localId || `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   entry.status = entry.status || 'venter'; // venter | synker | feilet
+  // Lagres som ArrayBuffer, ikke som Blob-objekt — Safari/WebKit har en kjent
+  // svakhet der en Blob hentet ut igjen fra IndexedDB (typisk etter at fanen
+  // har ligget i bakgrunnen en stund) kan miste sin underliggende backing
+  // store. En fetch() med en slik "død" Blob i FormData feiler da med et rent
+  // klientsidig "Load failed" som ALDRI når serveren, uansett forbindelse
+  // eller antall forsøk — se syncQueue() der den bygges opp igjen til en
+  // fersk Blob rett før bruk. En ArrayBuffer har ingen slik avhengighet.
+  if (entry.imageBlob) {
+    entry.imageBlobBuffer = await entry.imageBlob.arrayBuffer();
+    entry.imageBlobType = entry.imageBlob.type;
+    delete entry.imageBlob;
+  }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).put(entry);
@@ -88,12 +100,18 @@ async function syncQueue(onProgress){
       let art = item.art;
       let kiKonfidens = item.kiKonfidens;
       let kiAlternativer = item.kiAlternativer;
-      if (!art && item.imageBlob && window.KiClient) {
+      // item.imageBlob (fremfor imageBlobBuffer) dekker elementer som ble
+      // lagt i køen FØR ArrayBuffer-omleggingen over — bygges likevel opp
+      // som en fersk Blob her uansett kilde, aldri gjenbrukt direkte.
+      const imageBlob = item.imageBlobBuffer
+        ? new Blob([item.imageBlobBuffer], { type: item.imageBlobType })
+        : (item.imageBlob || null);
+      if (!art && imageBlob && window.KiClient) {
         // Egen try/catch her — en KI-feil (f.eks. Workeren midlertidig nede)
         // skal falle tilbake til "Ikke identifisert" under, ikke feile hele
         // synk-forsøket for dette funnet (se den ytre catch-blokken).
         try {
-          const kiResultat = await window.KiClient.gjenkjenn(item.imageBlob);
+          const kiResultat = await window.KiClient.gjenkjenn(imageBlob);
           art = kiResultat.beste ? kiResultat.beste.art : null;
           kiKonfidens = kiResultat.beste ? kiResultat.beste.konfidens : 0;
           kiAlternativer = kiResultat.alternativer || [];
@@ -107,7 +125,7 @@ async function syncQueue(onProgress){
         artstype: item.artstype || (art && art.artstype) || 'annet',
         lat: item.lat, lon: item.lon,
         tidspunkt: item.tidspunkt,
-        imageBlob: item.imageBlob,
+        imageBlob,
         kiKonfidens: kiKonfidens || 0,
         kiAlternativer: kiAlternativer || []
       });
