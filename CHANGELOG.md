@@ -1,5 +1,21 @@
 # Endringslogg
 
+## 0.9.27 — Peker til Artsorakel når KI-gjenkjenningen er usikker
+Undersøkt om Artsdatabankens Artsorakel (eller en lignende tjeneste) kunne
+erstatte Claude vision for artsgjenkjenning, med et åpent API som lot seg
+koble mot taksonomien her. Konklusjon: det finnes ikke noe slikt API —
+Artsorakel-appens egen backend (`ai.artsdatabanken.no`, funnet ved å lese
+den MIT-lisensierte kildekoden på github.com/Artsdatabanken/orakel) er
+udokumentert, uversjonert og uten publiserte vilkår for tredjepartsbruk,
+kun ment for appen selv. Modellen bak er dessuten utviklet av Naturalis,
+ikke Artsdatabanken.
+
+I stedet viser registreringsflyten nå en lenke til Artsorakel
+(orakel.artsdatabanken.no) for en uavhengig ny KI-vurdering, i de to
+tilfellene der vår egen KI enten er usikker (kandidatliste vist) eller ikke
+finner noen match i det hele tatt — se `ARTSORAKEL_HINT_HTML` og
+`renderRegisterPanel()` i `js/app.js`.
+
 ## 0.9.26 — Køede funn med bilde kunne feile synk permanent på iOS Safari
 Oppfølging av 0.9.25 sin synk-retry-fiks: brukertilbakemelding samme dag
 viste at ett funn fortsatt feilet ved hvert eneste synk-forsøk (automatisk

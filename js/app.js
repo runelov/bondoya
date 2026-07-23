@@ -2,8 +2,8 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.26';
-const APP_BUILD_DATE = '2026-07-19';
+const APP_VERSION = '0.9.27';
+const APP_BUILD_DATE = '2026-07-23';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
 // ingen build-step som lar de to dele en fil, så listen må holdes i synk
@@ -1257,6 +1257,15 @@ const FOTOTIPS_HTML = `
     </ul>
   </div>`;
 
+// Vises sammen med FOTOTIPS_HTML når KI er usikker (kandidatliste vist) eller
+// ikke fant noe treff i det hele tatt — Artsdatabanken har ikke noe åpent API
+// for artsgjenkjenning som kan kobles mot taksonomien her (undersøkt 2026-07:
+// Artsorakel-appens egen backend, ai.artsdatabanken.no, er udokumentert og
+// uten publiserte vilkår for tredjepartsbruk), så i stedet lenkes brukeren
+// videre til Artsorakel-nettappen for en ny/uavhengig KI-vurdering av bildet.
+const ARTSORAKEL_HINT_HTML = `
+  <p class="hint">Usikker selv? <a href="https://orakel.artsdatabanken.no/" target="_blank" rel="noopener">Prøv Artsorakel</a> for en ny KI-vurdering av bildet.</p>`;
+
 function renderRegisterPanel(state){
   const c = el('registerContent');
   const previewUrl = pendingImageBlob ? URL.createObjectURL(pendingImageBlob) : null;
@@ -1315,9 +1324,10 @@ function renderRegisterPanel(state){
           </button>`;
         }).join('')}
       </div>
-      ${FOTOTIPS_HTML}`;
+      ${FOTOTIPS_HTML}
+      ${ARTSORAKEL_HINT_HTML}`;
   } else {
-    kiHtml = `<p class="hint">Fant ikke arten automatisk. Velg art manuelt under.</p>${FOTOTIPS_HTML}`;
+    kiHtml = `<p class="hint">Fant ikke arten automatisk. Velg art manuelt under.</p>${FOTOTIPS_HTML}${ARTSORAKEL_HINT_HTML}`;
   }
 
   const kildeLabel = { gps: '(GPS)', exif: '(fra bildet)', manuell: '(valgt manuelt)' }[pendingPositionKilde] || '';
