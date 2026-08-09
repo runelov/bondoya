@@ -1,5 +1,20 @@
 # Endringslogg
 
+## Dependabot: wrangler-oppdatering (ingen app-versjonsendring)
+GitHub meldte 12 Dependabot-varsler (4 high, 8 moderate) på `main` — alle
+sporet tilbake til samme rotårsak i begge Workerne (`worker/api` og
+`worker/ki-proxy`): `wrangler`-devDependencyen var låst til `^4`, som
+resolvet til en versjon med sårbare transitive avhengigheter
+(`miniflare` → `sharp`/`undici`, bl.a. GHSA-f88m-g3jw-g9cj og
+GHSA-4cwx-7wf7-3272). Oppdatert til `wrangler@^4.120.0` i begge
+`package.json` — `npm audit` viser nå 0 sårbarheter i begge Worker-mapper.
+
+Ingen kode i `worker/api/src/` eller `worker/ki-proxy/src/` er endret —
+dette er en lokal utviklings-/deploy-verktøy-avhengighet (kjøres aldri i
+selve den deployede Workeren), så ingen `wrangler deploy` er nødvendig for
+at fiksen skal gjelde, og statisk-app-versjonen (`APP_VERSION`) er ikke
+rørt siden ingenting i `bondoya/js|css|index.html` endret seg.
+
 ## 0.9.27 — Peker til Artsorakel når KI-gjenkjenningen er usikker
 Undersøkt om Artsdatabankens Artsorakel (eller en lignende tjeneste) kunne
 erstatte Claude vision for artsgjenkjenning, med et åpent API som lot seg
