@@ -995,7 +995,7 @@ function wireSetupPanel(){
 function updateSyncPill(){
   const pill = el('syncStatus');
   pill.hidden = false;
-  if (!brukerCache) { pill.textContent = 'Logg på for artsobservasjoner'; return; }
+  if (!brukerCache) { pill.textContent = 'Logg på for artsobservasjoner (kontakt it-ansvarlig på butikken for invitasjon)'; return; }
   pill.textContent = `${navigator.onLine ? '🟢 Tilkoblet' : '🟡 Offline'} · v${APP_VERSION}`;
 }
 
