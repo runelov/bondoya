@@ -1,5 +1,28 @@
 # Endringslogg
 
+## 0.9.28 — Avvikler ⚙️-innstillingspanelet (GhStore-migrasjonen fullføres)
+Siste gjenværende bruk av det gamle delt-PAT-mønsteret i Bondøya fjernet —
+FungiFinder gjorde tilsvarende opprydding tidligere. Frem til nå måtte en
+admin lime inn sin egen GitHub PAT i ⚙️-panelet for at appen skulle kunne
+lese `bondoya-db/data/artskart-bondoya.json` (lokale Artskart-observasjoner
+brukt til å berike artsforslag) — en admin-only, per-enhet-konfigurasjon som
+i praksis betydde at kun den ene enheten en admin hadde koblet til, noensinne
+fikk stedsforankrede artsforslag.
+
+Nå pusher `bondoya-db` sin ukentlige `fetch_artskart.py`-jobb resultatet
+direkte til et nytt Worker-endepunkt (`POST /intern/artskart-oppdatering`,
+autentisert med en delt hemmelighet, samme mønster som KI-proxyens
+`X-App-Secret`), som cacher det i en ny KV-namespace (`REFERANSEDATA`).
+Alle innloggede brukere leser det derfra via `GET /arter/lokale-observasjoner`
+— ingen personlig token å konfigurere, og alle får nå samme berikede
+artsforslag, ikke bare admins enhet.
+
+Fjernet: `js/github-store.js`, ⚙️-knappen og hele `setupPanel`-arket i
+`index.html`, `wireSetupPanel()` og GitHub-tilkoblingshåndtererne i
+`js/app.js`. Se `konsept.md` "Avvikling av ⚙️-innstillingspanelet" for
+hele resonnementet, inkl. den bredere gamification-planen dette var en
+forutsetning for.
+
 ## Dependabot: wrangler-oppdatering (ingen app-versjonsendring)
 GitHub meldte 12 Dependabot-varsler (4 high, 8 moderate) på `main` — alle
 sporet tilbake til samme rotårsak i begge Workerne (`worker/api` og

@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/styles.css?v=0.9.27">
+<link rel="stylesheet" href="css/styles.css?v=0.9.28">
 </head>
 <body>
 
@@ -26,7 +26,6 @@
 
 <header id="topBar">
   <button id="accountToggle" class="iconBtn" aria-label="Konto" title="Konto">👤</button>
-  <button id="setupToggle" class="iconBtn" aria-label="Innstillinger" title="Innstillinger">⚙️</button>
   <div id="syncStatus" class="pill" hidden></div>
   <button id="listToggle" class="iconBtn" aria-label="Funnliste" title="Funnliste">📋</button>
   <button id="adminToggle" class="iconBtn" aria-label="Admin" title="Admin" hidden>🛡️</button>
@@ -191,26 +190,6 @@
   </div>
 </div>
 
-<!-- Setup: KI-proxy/Mapbox, samt valgfri tilkobling til det private artskart-berikelsesrepoet -->
-<div id="setupPanel" class="sheet" hidden>
-  <div class="sheetHandle"></div>
-  <h2>Innstillinger</h2>
-  <p class="hint" id="appVersion"></p>
-  <p class="hint">Artskart-berikelse (valgfritt): stedsforankrede artsforslag hentes fra et
-    privat repo. Trengs ikke for å registrere eller se funn — kun for bedre artsforslag.</p>
-  <label for="ghOwner">Eier</label>
-  <input id="ghOwner" type="text" value="runelov" autocomplete="off">
-  <label for="ghRepo">Repo</label>
-  <input id="ghRepo" type="text" value="bondoya-db" autocomplete="off">
-  <label for="ghToken">Token</label>
-  <input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_...">
-  <div class="sheetActions">
-    <button id="ghConnectBtn" class="primaryBtn">Koble til</button>
-    <button id="ghDisconnectBtn" class="secondaryBtn">Koble fra</button>
-  </div>
-  <p id="ghNote" class="note"></p>
-</div>
-
 <!-- Funnliste -->
 <div id="listPanel" class="sheet" hidden>
   <div class="sheetHandle"></div>
@@ -274,11 +253,10 @@
      Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
      sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
      allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
-<script src="js/github-store.js?v=0.9.27"></script>
-<script src="js/api-client.js?v=0.9.27"></script>
-<script src="js/offline-queue.js?v=0.9.27"></script>
-<script src="js/ki-client.js?v=0.9.27"></script>
-<script src="js/map.js?v=0.9.27"></script>
-<script src="js/app.js?v=0.9.27"></script>
+<script src="js/api-client.js?v=0.9.28"></script>
+<script src="js/offline-queue.js?v=0.9.28"></script>
+<script src="js/ki-client.js?v=0.9.28"></script>
+<script src="js/map.js?v=0.9.28"></script>
+<script src="js/app.js?v=0.9.28"></script>
 </body>
 </html>

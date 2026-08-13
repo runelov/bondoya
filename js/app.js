@@ -2,8 +2,8 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.27';
-const APP_BUILD_DATE = '2026-07-23';
+const APP_VERSION = '0.9.28';
+const APP_BUILD_DATE = '2026-08-13';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
 // ingen build-step som lar de to dele en fil, så listen må holdes i synk
@@ -20,7 +20,7 @@ const el = id => document.getElementById(id);
 let mapCtx = null;
 let funnCache = [];
 let speciesCache = [];
-let artskartCache = []; // [{art, taxonId, lat, lon, dato}, ...] fra data/artskart-bondoya.json
+let artskartCache = []; // [{art, taxonId, lat, lon, dato}, ...] — se hentLokaleObservasjoner() i api-client.js
 let activeFilter = 'alle';
 let activeVisning = 'alle'; // 'alle' | 'mine' — se wireListPanel
 let activeSort = 'nyeste'; // se SORTERINGER/wireListPanel
@@ -58,7 +58,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   wireAccountPanel();
   wireAdminPanel();
-  wireSetupPanel();
   wireListPanel();
   wireRegisterFlow();
   wireInviterPanel();
@@ -167,22 +166,19 @@ async function refreshFromRepo(){
   }
   try {
     funnCache = await window.ApiClient.hentFunn();
-    window.GhStore.saveLocal('funn', funnCache);
   } catch (e) {
     showToast('Kunne ikke hente funn: ' + e.message);
     return;
   }
-  // Artskart-berikelse er fortsatt et eget, valgfritt GitHub-basert
-  // datakilde (se setupPanel) — frikoblet fra selve funn-lastingen over,
-  // uendret siden MVP.
-  if (window.GhStore.isConfigured()) {
-    try {
-      const { data } = await window.GhStore.loadFile('data/artskart-bondoya.json');
-      artskartCache = data || [];
-    } catch {
-      artskartCache = [];
-    }
-  }
+  // Artskart-berikelse: lokale observasjoner pushet av bondoya-db sin
+  // ukentlige fetch_artskart.py-jobb, cachet server-side i Worker-en (se
+  // worker/api/src/routes/artskart.js) — frikoblet fra selve funn-lastingen
+  // over. Fram til 2026-08 var dette en klient-side GitHub-tilkobling
+  // (⚙️-panelet, admin-only og PAT-per-enhet); nå får alle innloggede samme
+  // data uten oppsett. hentLokaleObservasjoner() feiler bevisst aldri (se
+  // api-client.js), derfor ingen try/catch her.
+  const { observasjoner } = await window.ApiClient.hentLokaleObservasjoner();
+  artskartCache = observasjoner || [];
   renderFindsPaKart();
   renderList();
 }
@@ -261,10 +257,6 @@ function renderAccountPanel(){
   // skjer server-side (requireSession på POST /funn og GET /tiles/...).
   el('fabRegister').hidden = !brukerCache;
   el('fabGallery').hidden = !brukerCache;
-  // ⚙️-panelet er levning fra MVP-ens GitHub-token-oppsett (fortsatt brukt
-  // read-only til å hente artskart-bondoya.json) — admin-only, samme
-  // kosmetisk-skjuling-prinsipp som adminToggle over.
-  el('setupToggle').hidden = !brukerCache || brukerCache.rolle !== 'admin';
   // Funnliste-knapp: alltid synlig for innloggede (de ser alltid alle egne
   // funn), men skjult for besøkende når admin har skrudd av offentlig
   // funnvisning (eller mens vi ennå ikke har fått bekreftet flagget —
@@ -949,49 +941,10 @@ async function renderBrukerListe(){
   });
 }
 
-// ---------- setup-panel ----------
-
-function wireSetupPanel(){
-  el('appVersion').textContent = `Bondøya v${APP_VERSION} (${APP_BUILD_DATE})`;
-  const cfg = window.GhStore.getConfig();
-  if (cfg) {
-    el('ghOwner').value = cfg.owner;
-    el('ghRepo').value = cfg.repo;
-    el('ghToken').value = cfg.token;
-  }
-  el('setupToggle').addEventListener('click', () => toggleSheet('setupPanel'));
-
-  el('ghConnectBtn').addEventListener('click', async () => {
-    const owner = el('ghOwner').value.trim();
-    const repo = el('ghRepo').value.trim();
-    const token = el('ghToken').value.trim();
-    if (!owner || !repo || !token) {
-      el('ghNote').textContent = 'Fyll ut eier, repo og token.';
-      return;
-    }
-    el('ghNote').textContent = 'Kobler til …';
-    try {
-      const branch = await window.GhStore.detectDefaultBranch(owner, repo, token);
-      window.GhStore.setConfig({ owner, repo, token, branch });
-      el('ghNote').textContent = `Tilkoblet (branch: ${branch}).`;
-      await refreshFromRepo();
-      toggleSheet('setupPanel', false);
-    } catch (e) {
-      el('ghNote').textContent = 'Feil: ' + e.message;
-    }
-  });
-
-  el('ghDisconnectBtn').addEventListener('click', () => {
-    window.GhStore.clearConfig();
-    el('ghToken').value = '';
-    el('ghNote').textContent = 'Koblet fra. Artskart-baserte artsforslag er nå avslått.';
-    refreshFromRepo();
-  });
-}
-
-// Versjonen vises her (ikke bare i det admin-only ⚙️-panelet) fordi vanlige
-// innloggede brukere ellers ikke hadde noe sted å se hvilken versjon som
-// kjører — etterspurt 2026-07-13.
+// Versjonen vises her — vanlige innloggede brukere har ellers ikke noe sted
+// å se hvilken versjon som kjører (etterspurt 2026-07-13; tidligere vist i
+// tillegg i ⚙️-panelet, fjernet 2026-08 sammen med hele GhStore-tilkoblingen,
+// se konsept.md "Avvikling av ⚙️-innstillingspanelet").
 function updateSyncPill(){
   const pill = el('syncStatus');
   pill.hidden = false;
@@ -1991,7 +1944,7 @@ function rodlisteBadge(kode){
 function toggleSheet(id, force){
   const sheet = el(id);
   const show = force !== undefined ? force : sheet.hidden;
-  ['setupPanel','listPanel','detailPanel','registerPanel','accountPanel','adminPanel','sidePanel','inviterPanel','dashboardPanel'].forEach(other => {
+  ['listPanel','detailPanel','registerPanel','accountPanel','adminPanel','sidePanel','inviterPanel','dashboardPanel'].forEach(other => {
     if (other !== id) el(other).hidden = true;
   });
   sheet.hidden = !show;

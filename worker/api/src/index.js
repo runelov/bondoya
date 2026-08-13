@@ -19,6 +19,7 @@ import { listSider, hentSide } from './routes/sider.js';
 import { sjekkInvitasjon, registrerMedInvitasjon } from './routes/invitasjoner.js';
 import { sokArter, hentArtsbeskrivelse, hentArtMiniatyrbilde } from './routes/arter.js';
 import { gjenkjennArt } from './routes/ki.js';
+import { oppdaterLokaleObservasjoner, hentLokaleObservasjoner } from './routes/artskart.js';
 
 const router = createRouter();
 router.post('/auth/be-om-lenke', beOmLenke);
@@ -36,6 +37,8 @@ router.get('/tiles/:z/:x/:y', hentFlis);
 router.get('/arter/sok', sokArter);
 router.get('/arter/:taxonId/beskrivelse', hentArtsbeskrivelse);
 router.get('/arter/miniatyrbilde', hentArtMiniatyrbilde);
+router.get('/arter/lokale-observasjoner', hentLokaleObservasjoner);
+router.post('/intern/artskart-oppdatering', oppdaterLokaleObservasjoner);
 router.patch('/admin/arter/:taxonId/beskrivelse', settArtsbeskrivelse);
 router.post('/ki/gjenkjenn', gjenkjennArt);
 router.get('/admin/brukere', listBrukere);

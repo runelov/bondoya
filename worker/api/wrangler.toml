@@ -15,6 +15,13 @@ database_id = "fcc8265e-0a88-45cb-b474-b0706337edec"
 binding = "RATE_LIMIT"
 id = "43f78af9a2184f3fa272d19bc89edfda"
 
+# Referansedata-cache: pushet innhold fra bondoya-db sin ukentlige
+# Artskart-hentejobb (se routes/artskart.js) — IKKE rate-limiting-relatert,
+# derfor et eget namespace i stedet for å gjenbruke RATE_LIMIT over.
+[[kv_namespaces]]
+binding = "REFERANSEDATA"
+id = "b8b053a0c3de45a49d6d5ee4db5e7816"
+
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "bondoya-bilder"
@@ -23,8 +30,10 @@ bucket_name = "bondoya-bilder"
 ALLOWED_ORIGIN = "https://bondoya.no"
 ENVIRONMENT = "production"
 
-# TURNSTILE_SECRET_KEY og RESEND_API_KEY settes IKKE her — sett dem med:
+# TURNSTILE_SECRET_KEY, RESEND_API_KEY og ARTSKART_PUSH_SECRET settes IKKE
+# her — sett dem med:
 #   wrangler secret put TURNSTILE_SECRET_KEY
 #   wrangler secret put RESEND_API_KEY
+#   wrangler secret put ARTSKART_PUSH_SECRET
 # aldri i denne filen eller noe annet sted i det offentlige repoet.
 # Samme disiplin som bondoya-ki-proxy sine hemmeligheter.

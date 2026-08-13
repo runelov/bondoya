@@ -1,8 +1,9 @@
 // js/api-client.js
-// Klient for bondoya-api-workeren (auth + funn-CRUD). I motsetning til
-// KiClient/GhStore er dette IKKE brukerkonfigurerbart — alle brukere deler
-// samme backend, så URL-en er fast. Lokalt (127.0.0.1/localhost) pekes det
-// mot `wrangler dev` sin port i stedet for produksjons-hostnavnet.
+// Klient for bondoya-api-workeren (auth + funn-CRUD, samt lokale
+// Artskart-observasjoner — se hentLokaleObservasjoner() under). IKKE
+// brukerkonfigurerbart — alle brukere deler samme backend, så URL-en er
+// fast. Lokalt (127.0.0.1/localhost) pekes det mot `wrangler dev` sin port
+// i stedet for produksjons-hostnavnet.
 const API_BASE = ['localhost', '127.0.0.1'].includes(location.hostname)
   ? 'http://localhost:8787'
   : 'https://api.bondoya.no';
@@ -317,6 +318,19 @@ async function hentArtMiniatyrbilde(latinsk) {
   return res.json();
 }
 
+// Erstatter det tidligere klient-side GhStore-kallet mot bondoya-db
+// (`data/artskart-bondoya.json`, via en admin-limt-inn GitHub PAT i det nå
+// fjernede ⚙️-panelet) — Workeren mottar nå selv en ukentlig push fra
+// bondoya-db sin fetch_artskart.py og cacher den i KV, se
+// worker/api/src/routes/artskart.js. Feiler bevisst aldri, samme
+// "ikke-kritisk visningsdetalj"-resonnement som sokArter() — kun brukt til
+// å berike artsforslag, aldri kritisk for selve registreringen.
+async function hentLokaleObservasjoner() {
+  const res = await kall('/arter/lokale-observasjoner');
+  if (!res.ok) return { oppdatert: null, observasjoner: [] };
+  return res.json();
+}
+
 async function settArtsbeskrivelse(taxonId, beskrivelse) {
   const res = await kall(`/admin/arter/${taxonId}/beskrivelse`, {
     method: 'PATCH',
@@ -377,6 +391,7 @@ window.ApiClient = {
   sokArter,
   hentArtsbeskrivelse,
   hentArtMiniatyrbilde,
+  hentLokaleObservasjoner,
   settArtsbeskrivelse,
   gjenkjennArt,
 };
