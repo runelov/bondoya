@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.30';
+const APP_VERSION = '0.9.31';
 const APP_BUILD_DATE = '2026-08-13';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -45,6 +45,8 @@ let inviterToken = null; // satt av haandterInvitasjonFraUrl() hvis ?inviter=...
 let artsbeskrivelseCache = new Map(); // taxonId -> {beskrivelse, kilde, wikipediaUrl}, unngår gjentatte oppslag i én sesjon
 let apentFunnId = null; // se lastArtsbeskrivelse() — luker ut et sent svar for et funn som ikke lenger vises
 let visSlettedeBrukere = false; // se renderBrukerListe() — permanent slettede skjules som standard
+let fremdriftCache = null; // siste GET /meg/fremdrift-svar — slår opp merke-nøkler mot dette ved klikk/hover, se renderFremdrift()
+let fremdriftPinnetMerke = null; // nokkel til merket brukeren har trykket på (festet), eller null — se merkeDetalj()
 
 // ---------- oppstart ----------
 
@@ -461,9 +463,28 @@ async function renderAdminDashboard(){
 }
 
 // ---------- min fremdrift ----------
-// Personlig score/badges/artstype-dekning/øyhopper — se GET /meg/fremdrift
+// Personlig score/merker/artstype-dekning/øyhopper — se GET /meg/fremdrift
 // (worker/api/src/lib/fremdrift.js). All beregning skjer server-side; denne
 // funksjonen gjør bare presentasjon, ingen egen poenglogikk her.
+//
+// "Merker" (norsk for "badges", se produkttilbakemelding 2026-08-13) er rene
+// ikon-knapper — verken navn eller beskrivelse vises før hover/trykk (se
+// merkeDetalj()), delt i "oppnådd"/"gjenstående utfordringer". Ikonene under
+// er et RENT presentasjonsvalg, ikke duplisert forretningslogikk — serveren
+// eier opptjent/progresjon/tekst, klienten velger bare et symbol per
+// stabile nokkel-verdi den allerede returnerer. Et merke uten kjent nokkel
+// (fremtidig serverendring) faller tilbake til 🏅 i stedet for å knekke.
+const MERKE_IKONER = {
+  oppdageren: '🔭',
+  rodlistejeger: '⚠️',
+  artssamler_1: '🥉',
+  artssamler_2: '🥈',
+  artssamler_3: '🥇',
+  mangfoldsmester: '🧩',
+  oyhopper_2: '🏝️',
+  oyhopper_3: '🗺️',
+  arstidene_rundt: '🔄',
+};
 
 function wireFremdriftPanel(){
   el('fremdriftToggle').addEventListener('click', async () => {
@@ -472,9 +493,49 @@ function wireFremdriftPanel(){
   });
 }
 
+// Tynn SVG-fremdriftsring rundt et låst merke (viser hvor nærme man er),
+// helt fraværende for opptjente merker og merker uten progresjon (f.eks.
+// Oppdageren/Rødlistejeger, som er rene ja/nei).
+function merkeRing(b){
+  if (b.opptjent || !b.progresjon) return '';
+  const r = 22, c = 2 * Math.PI * r, size = (r + 3) * 2, mid = size / 2;
+  const andel = Math.min(1, b.progresjon.naa / b.progresjon.mal);
+  return `<svg class="ring" viewBox="0 0 ${size} ${size}">
+    <circle class="track" cx="${mid}" cy="${mid}" r="${r}"></circle>
+    <circle class="fill" cx="${mid}" cy="${mid}" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - andel)}"></circle>
+  </svg>`;
+}
+
+function merkeKnappHtml(b){
+  const ikon = MERKE_IKONER[b.nokkel] || '🏅';
+  return `
+    <button type="button" class="merke ${b.opptjent ? 'earned' : 'locked'}" data-nokkel="${escapeHtml(b.nokkel)}" aria-label="${escapeHtml(b.navn)}">
+      ${merkeRing(b)}${ikon}
+    </button>`;
+}
+
+// Viser navn+beskrivelse for ett merke i det delte detaljfeltet under begge
+// gruppene — kalt både ved hover (forhåndsvisning) og trykk (festet valg,
+// se renderFremdrift()s klikk-håndterer). null tømmer tilbake til hint-teksten.
+function merkeDetalj(nokkel){
+  const panel = el('fremdriftMerkeDetalj');
+  if (!panel) return; // panelet kan være borte hvis arket lukkes midt i et hover
+  const b = nokkel && fremdriftCache ? fremdriftCache.badges.find(x => x.nokkel === nokkel) : null;
+  if (!b) {
+    panel.innerHTML = '<span class="merkeDetaljHint">Trykk på et merke for å se navn og beskrivelse.</span>';
+    return;
+  }
+  const ikon = MERKE_IKONER[b.nokkel] || '🏅';
+  const progresjon = b.progresjon ? `<span class="prog">${b.progresjon.naa}/${b.progresjon.mal}</span> — ` : '';
+  panel.innerHTML = `
+    <span class="merkeDetaljIkon${b.opptjent ? '' : ' locked'}">${ikon}</span>
+    <span class="merkeDetaljTekst"><strong>${escapeHtml(b.navn)}</strong><span>${progresjon}${escapeHtml(b.beskrivelse)}</span></span>`;
+}
+
 async function renderFremdrift(){
   const container = el('fremdriftInnhold');
   container.innerHTML = '<p class="hint">Laster …</p>';
+  fremdriftPinnetMerke = null;
   let f;
   try {
     f = await window.ApiClient.hentFremdrift();
@@ -482,34 +543,69 @@ async function renderFremdrift(){
     container.innerHTML = `<p class="hint">Kunne ikke hente fremdrift: ${escapeHtml(e.message)}</p>`;
     return;
   }
+  fremdriftCache = f;
 
-  const elementKort = f.score.elementer.map(e => statKort(e.poeng, e.etikett)).join('');
+  const scoreRader = f.score.elementer.map(e => `
+    <div class="scoreRow">
+      <span class="lbl">${escapeHtml(e.etikett)}<span class="detail">${escapeHtml(e.detalj)}</span></span>
+      <span class="val">${e.poeng} p</span>
+    </div>`).join('') + `
+    <div class="scoreRow total">
+      <span class="lbl">Totalt</span>
+      <span class="val">${f.score.totalt} p</span>
+    </div>`;
+
   const artstypeChips = f.artstypeDekning.typer.map(t =>
     `<span class="fremdriftChip${t.dekket ? ' dekket' : ''}">${escapeHtml(t.artstype.charAt(0).toUpperCase() + t.artstype.slice(1))}</span>`
   ).join('');
-  const badgeListe = f.badges.map(b => {
-    const progresjon = b.progresjon
-      ? ` <span class="badgeProgresjon">(${b.progresjon.naa}/${b.progresjon.mal})</span>`
-      : '';
-    return `
-      <div class="badgeRow${b.opptjent ? '' : ' badgeLast'}">
-        <span class="badgeIcon">${b.opptjent ? '✓' : '○'}</span>
-        <div class="badgeText">
-          <strong>${escapeHtml(b.navn)}${progresjon}</strong>
-          <span class="badgeBeskrivelse">${escapeHtml(b.beskrivelse)}</span>
-        </div>
-      </div>`;
-  }).join('');
+
+  const oppnadd = f.badges.filter(b => b.opptjent);
+  const gjenstaar = f.badges.filter(b => !b.opptjent);
 
   container.innerHTML = `
-    <h3>Poengsum: ${f.score.totalt}</h3>
-    <div class="statGrid">${elementKort}</div>
+    <div class="scoreCard" id="fremdriftScoreCard">
+      <button type="button" class="scoreHead" aria-expanded="false">
+        <span>
+          <span class="big">Poengsum: ${f.score.totalt}</span>
+          <span class="sub">Trykk for å se hva som teller</span>
+        </span>
+        <span class="scoreChev">▾</span>
+      </button>
+      <div class="scoreBody">${scoreRader}</div>
+    </div>
     <h3>Artstype-dekning (${f.artstypeDekning.dekket}/${f.artstypeDekning.totalt})</h3>
     <div class="fremdriftChipWrap">${artstypeChips}</div>
     <h3>Øyhopper</h3>
     <p class="hint">${f.oyhopper.klynger} adskilte steder besøkt.</p>
-    <h3>Badges</h3>
-    <div class="badgeList">${badgeListe}</div>`;
+    <h4>Oppnådd <span class="count">(${oppnadd.length}/${f.badges.length})</span></h4>
+    <div class="merkeGrid">${oppnadd.map(merkeKnappHtml).join('') || '<p class="hint">Ingen merker oppnådd ennå.</p>'}</div>
+    <h4>Gjenstående utfordringer <span class="count">(${gjenstaar.length}/${f.badges.length})</span></h4>
+    <div class="merkeGrid">${gjenstaar.map(merkeKnappHtml).join('') || '<p class="hint">Alle merker oppnådd!</p>'}</div>
+    <div class="merkeDetalj" id="fremdriftMerkeDetalj">
+      <span class="merkeDetaljHint">Trykk på et merke for å se navn og beskrivelse.</span>
+    </div>`;
+
+  const scoreCard = el('fremdriftScoreCard');
+  scoreCard.querySelector('.scoreHead').addEventListener('click', () => {
+    const head = scoreCard.querySelector('.scoreHead');
+    const body = scoreCard.querySelector('.scoreBody');
+    const open = scoreCard.classList.toggle('open');
+    head.setAttribute('aria-expanded', String(open));
+    body.style.maxHeight = open ? body.scrollHeight + 'px' : '0px';
+  });
+
+  container.querySelectorAll('.merke').forEach((btn) => {
+    const nokkel = btn.dataset.nokkel;
+    btn.addEventListener('mouseenter', () => { if (!fremdriftPinnetMerke) merkeDetalj(nokkel); });
+    btn.addEventListener('mouseleave', () => { if (!fremdriftPinnetMerke) merkeDetalj(fremdriftPinnetMerke); });
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.merke.picked').forEach(t => t.classList.remove('picked'));
+      if (fremdriftPinnetMerke === nokkel) { fremdriftPinnetMerke = null; merkeDetalj(null); return; }
+      fremdriftPinnetMerke = nokkel;
+      btn.classList.add('picked');
+      merkeDetalj(nokkel);
+    });
+  });
 }
 
 async function renderInnstillinger(){

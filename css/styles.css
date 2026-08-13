@@ -388,19 +388,72 @@ body{
 }
 .fremdriftChip.dekket{ background: var(--ink); color: #fff; border-color: var(--ink); }
 
-.badgeList{ display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; }
-.badgeRow{
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: #f5f5f7;
+/* Poengsum — trykkbar for å forklare seg selv (produkttilbakemelding: totalen
+   må kunne begrunnes, ikke bare vises). Bygget som samme opp/ned-fold-mønster
+   som andre steder i appen (f.eks. artListeAdmin), IKKE statKort()/.statGrid
+   — den er fortsatt i bruk for admin-dashboardet og skal ikke endres her. */
+.scoreCard{ background: #f5f5f7; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 16px; }
+.scoreHead{
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: none; border: none; font-family: inherit; cursor: pointer;
+  padding: 14px 16px; text-align: left;
 }
-.badgeRow.badgeLast{ opacity: 0.55; }
-.badgeIcon{ flex: 0 0 auto; font-size: 16px; line-height: 1.4; }
-.badgeText{ flex: 1 1 auto; min-width: 0; }
-.badgeText strong{ display: block; font-size: 14px; }
-.badgeProgresjon{ color: var(--ink-soft); font-weight: 400; }
-.badgeBeskrivelse{ display: block; color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+.scoreHead .big{ display: block; font-size: 20px; font-weight: 700; }
+.scoreHead .sub{ display: block; font-size: 12.5px; color: var(--ink-soft); font-weight: 500; margin-top: 2px; }
+.scoreChev{ font-size: 12px; color: var(--ink-soft); transition: transform .18s ease; flex: 0 0 auto; }
+.scoreCard.open .scoreChev{ transform: rotate(180deg); }
+.scoreBody{ max-height: 0; overflow: hidden; transition: max-height .22s ease; }
+.scoreRow{
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 8px 16px; font-size: 13px; border-top: 1px solid var(--line);
+}
+.scoreRow .lbl{ color: var(--ink); font-weight: 600; }
+.scoreRow .lbl .detail{ display: block; color: var(--ink-soft); font-weight: 400; font-size: 12px; margin-top: 1px; }
+.scoreRow .val{ flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.scoreRow.total{ background: rgba(0,0,0,0.02); }
+
+/* Merker (norsk for "badges", jf. speidermerker) — delt i "oppnådd" og
+   "gjenstående utfordringer", jf. produkttilbakemelding. Rene ikon-merker
+   (verken navn eller beskrivelse vises før hover/trykk, se
+   fremdriftMerkeDetalj under) — bruker samme frostede hvit+skygge-oppskrift
+   som .iconBtn/.pill (IKKE en sort flate — tidligere versjon virket for
+   streng), med en tynn amber ring (samme farge som .rodlisteBadge) som
+   eneste "opptjent"-signal. Låste merker har i stedet en tynn
+   fremdriftsring som viser hvor nærme man er (SVG, satt i JS). */
+.merkeGrid{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.merke{
+  aspect-ratio: 1; border-radius: 16px; border: none; font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 21px;
+  position: relative; transition: transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .15s ease;
+}
+.merke:active{ transform: scale(0.92); }
+.merke.earned{
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12), 0 0 0 2px #b06a00;
+}
+.merke.locked{ background: #f5f5f7; border: 1.5px dashed var(--line); filter: grayscale(1); opacity: 0.55; }
+.merke.picked{ box-shadow: 0 0 0 3px var(--accent); filter: none; opacity: 1; }
+.merke .ring{ position: absolute; inset: -3px; border-radius: 18px; transform: rotate(-90deg); }
+.merke .ring circle{ fill: none; stroke-width: 3; }
+.merke .ring .track{ stroke: var(--line); }
+.merke .ring .fill{ stroke: var(--accent); stroke-linecap: round; }
+
+.merkeDetalj{
+  margin-top: 14px;
+  background: #f5f5f7; border-radius: var(--radius-md);
+  padding: 14px 16px; min-height: 78px;
+  display: flex; align-items: center; gap: 12px;
+}
+.merkeDetaljIkon{
+  width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: rgba(255,255,255,0.9); box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 0 0 2px #b06a00;
+}
+.merkeDetaljIkon.locked{ background: #fff; border: 1.5px dashed var(--line); box-shadow: none; filter: grayscale(1); }
+.merkeDetaljTekst strong{ display: block; font-size: 14px; margin-bottom: 2px; }
+.merkeDetaljTekst span{ font-size: 12.5px; line-height: 1.45; color: var(--ink-soft); }
+.merkeDetaljTekst .prog{ color: #b06a00; font-weight: 700; }
+.merkeDetaljHint{ font-size: 12.5px; color: var(--ink-soft); font-style: italic; }
 
 .posStatus{
   display: flex; align-items: center; gap: 8px;

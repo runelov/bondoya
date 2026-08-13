@@ -1,5 +1,35 @@
 # Endringslogg
 
+## 0.9.31 — Redesign av "merker" i Min fremdrift
+Produkttilbakemelding på 0.9.29/0.9.30's badge-liste, fem punkter:
+
+1. **Poengsummen kunne ikke forklares** — poengsum-kortet er nå trykkbart
+   og folder ut alle seks scoreelementene (`f.score.elementer`) med sin
+   poengsum, som til sammen gir totalen.
+2. **For streng, sort bakgrunn på opptjente merker** — byttet til appens
+   egen `.iconBtn`/`.pill`-oppskrift (frostet hvit + myk skygge) med en
+   tynn amber ring (samme farge som `.rodlisteBadge`) som eneste
+   "opptjent"-signal.
+3. **"Badges" → "Merker"** — kort, ett ord, allerede det vanlige norske
+   ordet for denne typen samle-/utmerkelsesikon.
+4. **Delt i "Oppnådd" / "Gjenstående utfordringer"** — to seksjoner med
+   hver sin telling, oppnådd øverst, i stedet for én blandet liste.
+5. **Artssamler I/II/III kolliderte med medaljeikonenes egne tall** (🥉 har
+   "3" trykt på seg, 🥇 har "1" — stikk motsatt av "I"/"III"). Byttet til
+   beskrivende navn: Artssamler → Ivrig artssamler → Artsmester
+   (`worker/api/src/lib/fremdrift.js`s `ARTSSAMLER_NAVN`), vanskelighetsgrad
+   formidlet i selve ordet, uavhengig av ikonvalg.
+
+Underveis også reformulert Rødlistejeger-beskrivelsen ("Første
+NT/VU/EN/CR-funn." → "Første funn av en rødlistet (truet) art.") — for
+teknisk med rå rødliste-koder.
+
+Merkene er fortsatt rene ikon-knapper (verken navn eller beskrivelse vises
+før hover/trykk, jf. 0.9.29) — nytt her er kun selve presentasjonen
+(`js/app.js`s `MERKE_IKONER`/`merkeKnappHtml()`/`merkeDetalj()`, delt
+detaljfelt `#fremdriftMerkeDetalj`). Artstype-dekning og øyhopper-linjen
+er uendret fra 0.9.30.
+
 ## 0.9.30 — Fiks overlappende artstype-chips i "Min fremdrift"
 Brukertilbakemelding samme dag "Min fremdrift" ble lansert (0.9.29):
 artstype-dekningslisten så ødelagt ut i praksis — flere brukere med reelle

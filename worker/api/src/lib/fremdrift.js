@@ -32,7 +32,12 @@ const POENG = {
 };
 
 const ARTSSAMLER_TERSKLER = [10, 25, 50];
-const ARTSSAMLER_ROMERTALL = ['I', 'II', 'III'];
+// Beskrivende navn i stedet for "Artssamler I/II/III" — produkttilbakemelding
+// 2026-08-13 fant at tallnavngivingen kolliderte med medaljeikonenes egne
+// trykte tall i klienten (🥉 har "3" trykt på seg, 🥇 har "1" — stikk
+// motsatt av "I"/"III"). Vanskelighetsgraden formidles nå i selve ordet,
+// uavhengig av hvilket ikon klienten velger å vise ved siden av.
+const ARTSSAMLER_NAVN = ['Artssamler', 'Ivrig artssamler', 'Artsmester'];
 
 function haversineMeter(a, b) {
   const R = 6371000;
@@ -171,12 +176,16 @@ export async function beregnFremdrift(brukerId, env) {
     {
       nokkel: 'rodlistejeger',
       navn: 'Rødlistejeger',
-      beskrivelse: 'Første NT/VU/EN/CR-funn.',
+      // Var "Første NT/VU/EN/CR-funn." — for teknisk (rå rødliste-koder),
+      // produkttilbakemelding 2026-08-13. "Rødlistet" er allerede et kjent
+      // begrep i appen (se rodlisteBadge() i funndetaljer), her paret med
+      // et vanlig ord i stedet for kodene.
+      beskrivelse: 'Første funn av en rødlistet (truet) art.',
       opptjent: rodlisteArter.length > 0,
     },
     ...ARTSSAMLER_TERSKLER.map((mal, i) => ({
       nokkel: `artssamler_${i + 1}`,
-      navn: `Artssamler ${ARTSSAMLER_ROMERTALL[i]}`,
+      navn: ARTSSAMLER_NAVN[i],
       beskrivelse: `${mal} ulike arter.`,
       opptjent: antallArter >= mal,
       progresjon: { naa: antallArter, mal },
