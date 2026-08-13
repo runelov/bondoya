@@ -1,5 +1,23 @@
 # Endringslogg
 
+## 0.9.30 — Fiks overlappende artstype-chips i "Min fremdrift"
+Brukertilbakemelding samme dag "Min fremdrift" ble lansert (0.9.29):
+artstype-dekningslisten så ødelagt ut i praksis — flere brukere med reelle
+data (11/17 artstyper) fikk chips som visuelt overlappet mellom rader,
+delvis dekket teksten på raden over. Rotårsak: listen gjenbrukte `.pill`,
+en klasse tegnet for et enkelt flytende merke over kartet (box-shadow +
+backdrop-blur), ikke for en tett wrappet flerlinjers liste — blur/shadow
+fra rad 2 sitt visuelle "spillover" inn i rad 1 var det som så ut som
+kollisjon.
+
+Erstattet med egne klasser (`.fremdriftChip`/`.fremdriftChipWrap`, samme
+avrundede resept som `.filterChip` andre steder i appen, men uten
+box-shadow/blur) i en ordentlig `flex-wrap`-container. Badge-listen fikk
+også en tydeligere visuell behandling i samme slag — kort med
+ikon+navn+beskrivelse i stedet for en enkel `<ul>`, tydeligere
+opptjent/ikke-opptjent-kontrast (fylt hake + full opasitet vs. tom sirkel
++ dempet).
+
 ## 0.9.29 — Fase A gamification: Min fremdrift (poeng, badges, artstype-dekning, øyhopper)
 Første del av gamification-konseptet i `konsept.md` ("Gamification:
 personlig fremdrift, poeng og badges") — kun **Fase A** (personlig

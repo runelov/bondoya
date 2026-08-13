@@ -370,11 +370,37 @@ body{
   margin: 0 0 12px;
 }
 
-/* Min fremdrift — artstype-dekning pills og badge-liste, se app.js sin
-   renderFremdrift(). Gjenbruker .pill/.statCard-konvensjonene over. */
-.pillUdekket{ opacity: 0.4; }
-.badgeOpptjent{ font-weight: 600; }
-.badgeLast{ color: var(--ink-soft); }
+/* Min fremdrift — artstype-dekning chips og badge-liste, se app.js sin
+   renderFremdrift(). Egne klassenavn i stedet for å gjenbruke .pill (som
+   er tegnet for et flytende merke over kartet — box-shadow/blur, ikke en
+   tett wrappet liste; det var nettopp den feilkoblingen som fikk chippene
+   til å se ut som de kolliderte) — resepten (avrundet, lys bakgrunn) lånes
+   fra .filterChip, men som egne klasser for å holde de to funksjonelt
+   urelaterte listene atskilt. */
+.fremdriftChipWrap{ display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.fremdriftChip{
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #f5f5f7;
+  color: var(--ink-soft);
+  font-size: 13px; font-weight: 600;
+}
+.fremdriftChip.dekket{ background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.badgeList{ display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; }
+.badgeRow{
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: #f5f5f7;
+}
+.badgeRow.badgeLast{ opacity: 0.55; }
+.badgeIcon{ flex: 0 0 auto; font-size: 16px; line-height: 1.4; }
+.badgeText{ flex: 1 1 auto; min-width: 0; }
+.badgeText strong{ display: block; font-size: 14px; }
+.badgeProgresjon{ color: var(--ink-soft); font-weight: 400; }
+.badgeBeskrivelse{ display: block; color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
 
 .posStatus{
   display: flex; align-items: center; gap: 8px;

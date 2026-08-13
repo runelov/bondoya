@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.29';
+const APP_VERSION = '0.9.30';
 const APP_BUILD_DATE = '2026-08-13';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -484,22 +484,32 @@ async function renderFremdrift(){
   }
 
   const elementKort = f.score.elementer.map(e => statKort(e.poeng, e.etikett)).join('');
-  const artstypeListe = f.artstypeDekning.typer.map(t =>
-    `<span class="pill${t.dekket ? '' : ' pillUdekket'}">${escapeHtml(t.artstype.charAt(0).toUpperCase() + t.artstype.slice(1))}</span>`
-  ).join(' ');
+  const artstypeChips = f.artstypeDekning.typer.map(t =>
+    `<span class="fremdriftChip${t.dekket ? ' dekket' : ''}">${escapeHtml(t.artstype.charAt(0).toUpperCase() + t.artstype.slice(1))}</span>`
+  ).join('');
   const badgeListe = f.badges.map(b => {
-    const progresjon = b.progresjon ? ` (${b.progresjon.naa}/${b.progresjon.mal})` : '';
-    return `<li class="${b.opptjent ? 'badgeOpptjent' : 'badgeLast'}">${b.opptjent ? '✓' : '—'} ${escapeHtml(b.navn)}${progresjon} — ${escapeHtml(b.beskrivelse)}</li>`;
+    const progresjon = b.progresjon
+      ? ` <span class="badgeProgresjon">(${b.progresjon.naa}/${b.progresjon.mal})</span>`
+      : '';
+    return `
+      <div class="badgeRow${b.opptjent ? '' : ' badgeLast'}">
+        <span class="badgeIcon">${b.opptjent ? '✓' : '○'}</span>
+        <div class="badgeText">
+          <strong>${escapeHtml(b.navn)}${progresjon}</strong>
+          <span class="badgeBeskrivelse">${escapeHtml(b.beskrivelse)}</span>
+        </div>
+      </div>`;
   }).join('');
 
   container.innerHTML = `
     <h3>Poengsum: ${f.score.totalt}</h3>
     <div class="statGrid">${elementKort}</div>
-    <p class="hint"><strong>Artstype-dekning (${f.artstypeDekning.dekket}/${f.artstypeDekning.totalt}):</strong></p>
-    <p>${artstypeListe}</p>
-    <p class="hint"><strong>Øyhopper:</strong> ${f.oyhopper.klynger} adskilte steder besøkt.</p>
-    <p class="hint"><strong>Badges:</strong></p>
-    <ul>${badgeListe}</ul>`;
+    <h3>Artstype-dekning (${f.artstypeDekning.dekket}/${f.artstypeDekning.totalt})</h3>
+    <div class="fremdriftChipWrap">${artstypeChips}</div>
+    <h3>Øyhopper</h3>
+    <p class="hint">${f.oyhopper.klynger} adskilte steder besøkt.</p>
+    <h3>Badges</h3>
+    <div class="badgeList">${badgeListe}</div>`;
 }
 
 async function renderInnstillinger(){
