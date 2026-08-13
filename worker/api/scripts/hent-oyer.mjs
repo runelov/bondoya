@@ -7,8 +7,8 @@
 // (kjørt manuelt mot Overpass før dette scriptet ble skrevet).
 //
 // Engangs/sjelden-kjørt script — kystlinjer endrer seg ikke, ingen cron.
-// Kjør på nytt manuelt kun hvis kartgrensene (MAP_MAX_BOUNDS i js/map.js)
-// endres, eller for å friske opp navnedata hvis OSM oppdateres.
+// Kjør på nytt manuelt kun hvis søkeradiusen (BBOX under) endres igjen,
+// eller for å friske opp navnedata hvis OSM/Kartverket oppdateres.
 //
 // Bevisst ÉN sammensatt Overpass-spørring (`out geom;` på hele
 // søkeresultatet gir full geometri for både ways og relasjonsmedlemmer i
@@ -34,10 +34,24 @@ import { writeFile, readFile } from 'node:fs/promises';
 // for å gjenbruke et tidligere hentet svar i stedet for å spørre på nytt.
 const CACHE_PATH = process.env.BONDOYA_OYER_CACHE;
 
-// Samme grense som MAP_MAX_BOUNDS i js/map.js (sørvest, nordøst) —
-// (sør,vest,nord,øst) for Overpass sin bbox-rekkefølge.
-const BBOX = '64.8109,10.6860,64.8264,10.7463';
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
+// 3km radius rundt Bondøya sentrum (64.8187, 10.7161) — BEVISST videre enn
+// MAP_MAX_BOUNDS i js/map.js (som kun styrer kartets panoreringsgrense).
+// Produkttilbakemelding 2026-08-13: brukeren fant flere navngitte holmer
+// (Tangholmen, Estenholmen, Emåholman, Brannholmen, Heimværet, Tjeldsøya,
+// Kløvningen, Brentøya m.fl.) synlige i Kartverket-laget rett utenfor den
+// opprinnelige MAP_MAX_BOUNDS-baserte spørringen — bekreftet mot
+// Kartverket sitt eget stedsnavn-API (ws.geonorge.no/stedsnavn), alle
+// innenfor 1,2-2,9 km fra Bondøya sentrum. Øyhopper-dekning skal ikke
+// være snevrere enn det kartet lar deg SE, og et reelt GPS-punkt ved
+// registrering er uansett ikke begrenset til MAP_MAX_BOUNDS i utgangspunktet
+// — derav egen, videre radius her.
+const BBOX = '64.7918,10.6528,64.8456,10.7794';
+
+// overpass-api.de (hovedinstansen) blokkerte denne IP-en med ECONNREFUSED
+// etter gjentatte manuelle undersøkelser samme dag (se scriptets tidligere
+// commit-historie) — bruker et offentlig speil i stedet. Sett
+// BONDOYA_OVERPASS_URL for å overstyre ved behov.
+const OVERPASS = process.env.BONDOYA_OVERPASS_URL || 'https://overpass.private.coffee/api/interpreter';
 
 // Verifisert manuelt 2026-08-13: denne relasjonen er en OSM-datafeil, ikke
 // en reell 28. øy — den gjenbruker 3 av Risøya (16613603) sine 4

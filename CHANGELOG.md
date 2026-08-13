@@ -1,5 +1,34 @@
 # Endringslogg
 
+## Utvidet Øyhopper-dekning til 3km radius (ingen app-versjonsendring)
+Produkttilbakemelding samme dag som 0.9.33: brukeren kunne se flere
+navngitte holmer (Tangholmen, Estenholmen, Emåholman, Brannholmen,
+Heimværet, Tjeldsøya, Kløvningen, Brentøya) i Kartverket-kartlaget ved å
+zoome ut, rett utenfor 0.9.33 sin MAP_MAX_BOUNDS-baserte Overpass-spørring.
+Bekreftet mot Kartverket sitt eget stedsnavn-API (ws.geonorge.no/stedsnavn)
+at alle lå 1,2-2,9 km fra Bondøya sentrum — reelle, navngitte øyer et
+GPS-punkt ved registrering fint kunne havne på, uavhengig av kartets egen
+panoreringsgrense.
+
+`worker/api/scripts/hent-oyer.mjs` sin `BBOX` utvidet fra
+MAP_MAX_BOUNDS-boksen (~1,7×4,3 km) til en egen 3km-radius rundt Bondøya
+sentrum (bevisst frikoblet fra `MAP_MAX_BOUNDS`, som fortsatt kun styrer
+kartets panoreringsgrense — ingen endring i `js/map.js`). Kjørt på nytt:
+**173 øyer** (opp fra 27), 75 navngitte. `src/data/oyer-bondoya.json`
+vokste fra 30KB til 170KB — fortsatt lite i Worker-sammenheng.
+
+Underveis: `overpass-api.de` (hovedinstansen) blokkerte denne IP-en med
+`ECONNREFUSED` etter dagens tidligere undersøkelser — byttet til et
+offentlig speil (`overpass.private.coffee`, konfigurerbart via
+`BONDOYA_OVERPASS_URL`). Ett speil forsøkt først (`overpass.osm.ch`) viste
+seg å ha et ødelagt/utdatert datasett for dette området (0 treff på en
+spørring som skulle gi 22) — luket ut ved å sjekke `osm3s.timestamp_osm_base`
+i svaret før man stoler på et ukjent speil.
+
+Verifisert lokalt: et testfunn registrert på Tangholmens reelle
+koordinater (hentet fra Kartverket-APIet) identifiseres nå korrekt og
+utløser Øyhopper II-merket sammen med Bondøya og Liss-Bondøya.
+
 ## 0.9.33 — Fase E (ekte øy-navn for Øyhopper) + Fase B (admin-fremdriftsoversikt)
 
 ### Fase E: Øyhopper bruker nå ekte, navngitte øyer
