@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.31';
+const APP_VERSION = '0.9.32';
 const APP_BUILD_DATE = '2026-08-13';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -1629,6 +1629,25 @@ function wireCropInteraction(){
   });
 }
 
+// Tilbakemeldingsteksten vist rett etter en vellykket direkte registrering
+// (ikke offline-kø-synk, se saveFind() under) — bygget fra fremdriftEndring
+// i POST /funn-svaret (worker/api/src/routes/funn.js, differ fremdrift
+// før/etter innsetting). Feiler aldri — mangler feltet av en eller annen
+// grunn (f.eks. eldre klient/server-mismatch) faller den bare tilbake til
+// den opprinnelige, rene teksten; dette er kun en presentasjonsdetalj, ikke
+// noe selve registreringen skal kunne blokkeres av. escapeHtml() trengs
+// ikke her — showToast() setter .textContent, ikke innerHTML.
+function fremdriftToastTekst(endring){
+  if (!endring) return 'Funn registrert ✓';
+  const { poengEndring, nyeMerker } = endring;
+  if (nyeMerker && nyeMerker.length > 0) {
+    const navn = nyeMerker.map(m => m.navn).join(', ');
+    const flertall = nyeMerker.length > 1 ? 'nye merker' : 'nytt merke';
+    return `🎉 Du fikk ${flertall}: ${navn}! (+${poengEndring} poeng)`;
+  }
+  return `Funn registrert ✓ (+${poengEndring} poeng)`;
+}
+
 async function saveFind(art){
   const pos = pendingPosition; // sikkerhetsnett — knappen er disablet uten posisjon, se updateSaveButton
   if (!pos) { showToast('Velg posisjon i kartet først.'); return; }
@@ -1644,8 +1663,9 @@ async function saveFind(art){
 
   if (navigator.onLine && brukerCache) {
     try {
-      await window.ApiClient.opprettFunn(entry);
-      showToast('Funn registrert ✓');
+      const nyttFunn = await window.ApiClient.opprettFunn(entry);
+      const harNyttMerke = nyttFunn.fremdriftEndring && nyttFunn.fremdriftEndring.nyeMerker.length > 0;
+      showToast(fremdriftToastTekst(nyttFunn.fremdriftEndring), harNyttMerke ? 5500 : undefined);
       await refreshFromRepo();
       return;
     } catch (e) {
@@ -2109,12 +2129,12 @@ function wireSheetDismiss(){
 }
 
 let toastTimer = null;
-function showToast(msg){
+function showToast(msg, varighetMs){
   const t = el('toast');
   t.textContent = msg;
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
+  toastTimer = setTimeout(() => { t.hidden = true; }, varighetMs || 3500);
 }
 
 function escapeHtml(str){

@@ -3,6 +3,7 @@ import { corsHeaders } from '../lib/cors.js';
 import { requireSession } from '../lib/session.js';
 import { parseFunnRad, hentFunnRad, validerFunnFelter, lastOppBildeHvisTilstede } from '../lib/funn.js';
 import { erFunnSynligForPublic } from '../lib/innstillinger.js';
+import { beregnFremdrift } from '../lib/fremdrift.js';
 
 export async function listFunn({ request, env }) {
   const cors = corsHeaders(env);
@@ -34,6 +35,17 @@ export async function opprettFunn({ request, env }) {
     return json({ error: e.message }, 400, cors);
   }
 
+  // Snapshot rett før innsetting — sammenlignes mot samme beregning rett
+  // etter (under) for å kunne fortelle brukeren hva DENNE registreringen
+  // konkret ga av poeng/nye merker, uten en egen persistert poeng-tabell
+  // (fremdrift beregnes fortsatt kun on-the-fly, se lib/fremdrift.js).
+  // Kjent, akseptert kant-tilfelle: to registreringer fra samme bruker som
+  // treffer serveren samtidig kan i sjeldne tilfeller telle et grensemerke
+  // som "nytt" i begge svarene — selve fremdriften i D1 er uansett alltid
+  // korrekt beregnet fra faktiske funn, kun denne varslingsteksten kan da
+  // bli unøyaktig for én av de to togglene.
+  const fremdriftFor = await beregnFremdrift(bruker.id, env);
+
   const rad = await env.DB.prepare(
     `INSERT INTO funn (
        art_norsk, art_latinsk, art_taxon_id, artstype, rodlistekategori, lat, lon, tidspunkt,
@@ -60,7 +72,18 @@ export async function opprettFunn({ request, env }) {
     )
     .first();
 
-  return json(parseFunnRad(rad, bruker), 201, cors);
+  const fremdriftEtter = await beregnFremdrift(bruker.id, env);
+  const forOpptjent = new Set(fremdriftFor.badges.filter((b) => b.opptjent).map((b) => b.nokkel));
+  const nyeMerker = fremdriftEtter.badges
+    .filter((b) => b.opptjent && !forOpptjent.has(b.nokkel))
+    .map((b) => ({ nokkel: b.nokkel, navn: b.navn }));
+
+  const funnRespons = parseFunnRad(rad, bruker);
+  funnRespons.fremdriftEndring = {
+    poengEndring: fremdriftEtter.score.totalt - fremdriftFor.score.totalt,
+    nyeMerker,
+  };
+  return json(funnRespons, 201, cors);
 }
 
 export async function oppdaterFunn({ request, env, params }) {

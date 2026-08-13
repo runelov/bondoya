@@ -1,5 +1,34 @@
 # Endringslogg
 
+## 0.9.32 — Poeng/merke-varsel rett ved registrering
+Til nå måtte brukeren selv åpne "Min fremdrift" for å oppdage at et funn ga
+poeng eller et nytt merke. `POST /funn` (`opprettFunn()` i
+`worker/api/src/routes/funn.js`) kjører nå `beregnFremdrift()` (uendret
+funksjon fra `lib/fremdrift.js`) én gang rett før innsetting og én gang
+rett etter, differ de to, og legger svaret ved som `fremdriftEndring:
+{poengEndring, nyeMerker}` på selve funn-svaret — ingen ny poeng-/badge-
+tabell, samme on-the-fly-prinsipp som resten av fremdrift-funksjonen.
+Bevisst avgrenset til direkte (online) nyregistrering (`saveFind()` i
+`js/app.js`) — verken redigering av eksisterende funn eller
+offline-kø-synk er del av denne endringen.
+
+Frontend gjenbruker den eksisterende `showToast()`-mekanismen (ingen ny
+UI-komponent): en stille "Funn registrert ✓ (+X poeng)" som standard, en
+mer markert "🎉 Du fikk nytt merke: … (+X poeng)" når registreringen
+faktisk krysser en merke-terskel, med lengre visningstid for den varianten.
+Iterert via to interaktive designutkast (godkjent av produkteier) før
+denne implementasjonen — se `40c1d811-23e5-47ca-92ad-8893c9d0e8e7`
+Artifact-historikken for detaljene rundt selve merke-visningen (0.9.30 →
+0.9.31).
+
+Verifisert lokalt end-to-end: poengsum før/etter stemmer eksakt med
+poengEndring i svaret over flere registreringer, og en art som faktisk
+krysser Artssamler-terskelen (10 arter) returnerer riktig
+`nyeMerker: [{nokkel:"artssamler_1", navn:"Artssamler"}]` — bekreftet at
+`GET /funn/offentlig` fortsatt ikke eksponerer `fremdriftEndring`
+(feltet legges kun til i `opprettFunn()`s respons, ikke i den delte
+`parseFunnRad()`).
+
 ## 0.9.31 — Redesign av "merker" i Min fremdrift
 Produkttilbakemelding på 0.9.29/0.9.30's badge-liste, fem punkter:
 
