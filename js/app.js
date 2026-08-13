@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.32';
+const APP_VERSION = '0.9.33';
 const APP_BUILD_DATE = '2026-08-13';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -305,6 +305,7 @@ function wireAdminPanel(){
       el('invitasjonNyLenke').hidden = true;
       await renderAdminInvitasjoner();
       await renderBrukerListe();
+      await renderAdminFremdrift();
     }
   });
 
@@ -462,6 +463,28 @@ async function renderAdminDashboard(){
     </div>`;
 }
 
+// ---------- admin: fremdrift-oversikt (Fase B) ----------
+// Rent lesbart sammendrag av alles fremdrift, se worker/api/src/routes/
+// admin.js sin hentAdminFremdrift() — samme beregnFremdrift() som "Min
+// fremdrift" kaller for seg selv, ingen egen admin-poenglogikk her heller.
+async function renderAdminFremdrift(){
+  const container = el('adminFremdriftListe');
+  container.innerHTML = '<p class="hint">Laster …</p>';
+  let oversikt;
+  try {
+    oversikt = await window.ApiClient.hentAdminFremdrift();
+  } catch (e) {
+    container.innerHTML = `<p class="hint">Kunne ikke hente fremdrift-oversikt: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  container.innerHTML = oversikt.map((b) => `
+    <div class="findRow" style="display:flex;flex-direction:column;align-items:stretch;gap:2px;${b.status === 'aktiv' ? '' : 'opacity:0.55'}">
+      <div><strong>${escapeHtml(b.kortnavn)}</strong> <span class="hint">${b.status === 'aktiv' ? '' : '(deaktivert)'}</span></div>
+      <div class="hint">${b.poengsum} poeng · ${b.antallMerkerOppnadd}/${b.antallMerkerTotalt} merker · ${b.antallArter} arter</div>
+    </div>`).join('') || '<p class="hint">Ingen brukere ennå.</p>';
+}
+
 // ---------- min fremdrift ----------
 // Personlig score/merker/artstype-dekning/øyhopper — se GET /meg/fremdrift
 // (worker/api/src/lib/fremdrift.js). All beregning skjer server-side; denne
@@ -485,6 +508,23 @@ const MERKE_IKONER = {
   oyhopper_3: '🗺️',
   arstidene_rundt: '🔄',
 };
+
+// Norsk listetekst for besøkte øyer (f.oyhopper.oyer, se GET /meg/fremdrift
+// — navn er null for øyer uten offisielt navn, se
+// worker/api/scripts/hent-oyer.mjs). Returnerer en ferdig ": Bondøya og
+// Liss-Bondøya"-hale (tom streng hvis ingen øyer ennå), matcher samme
+// flertallsbøying som lib/fremdrift.js sin beskrivOyer() server-side.
+function beskrivOyerListe(oyer){
+  if (!oyer || oyer.length === 0) return '';
+  const navngitte = oyer.filter(o => o.navn).map(o => escapeHtml(o.navn));
+  const antallNavnlose = oyer.length - navngitte.length;
+  const deler = [...navngitte];
+  if (antallNavnlose === 1) deler.push('et navnløst skjær');
+  else if (antallNavnlose > 1) deler.push(`${antallNavnlose} navnløse skjær`);
+  if (deler.length === 0) return '';
+  const tekst = deler.length === 1 ? deler[0] : `${deler.slice(0, -1).join(', ')} og ${deler[deler.length - 1]}`;
+  return `: ${tekst}`;
+}
 
 function wireFremdriftPanel(){
   el('fremdriftToggle').addEventListener('click', async () => {
@@ -576,7 +616,7 @@ async function renderFremdrift(){
     <h3>Artstype-dekning (${f.artstypeDekning.dekket}/${f.artstypeDekning.totalt})</h3>
     <div class="fremdriftChipWrap">${artstypeChips}</div>
     <h3>Øyhopper</h3>
-    <p class="hint">${f.oyhopper.klynger} adskilte steder besøkt.</p>
+    <p class="hint">${f.oyhopper.antallOyer} øyer besøkt${beskrivOyerListe(f.oyhopper.oyer)}.</p>
     <h4>Oppnådd <span class="count">(${oppnadd.length}/${f.badges.length})</span></h4>
     <div class="merkeGrid">${oppnadd.map(merkeKnappHtml).join('') || '<p class="hint">Ingen merker oppnådd ennå.</p>'}</div>
     <h4>Gjenstående utfordringer <span class="count">(${gjenstaar.length}/${f.badges.length})</span></h4>

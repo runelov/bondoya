@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/styles.css?v=0.9.32">
+<link rel="stylesheet" href="css/styles.css?v=0.9.33">
 </head>
 <body>
 
@@ -103,6 +103,7 @@
     <button class="adminTabBtn" data-tab="sider">Sider</button>
     <button class="adminTabBtn" data-tab="invitasjoner">Invitasjoner</button>
     <button class="adminTabBtn" data-tab="brukere">Brukere</button>
+    <button class="adminTabBtn" data-tab="fremdrift">Fremdrift</button>
   </div>
 
   <div id="adminTab-innstillinger" class="adminTabPanel">
@@ -196,6 +197,13 @@
     <h2>Admin — brukere</h2>
     <div id="brukerList" class="findList"></div>
   </div>
+
+  <!-- Fase B: oversikt over alles fremdrift (poeng/merker/arter), se GET /admin/fremdrift -->
+  <div id="adminTab-fremdrift" class="adminTabPanel">
+    <h2>Admin — fremdrift</h2>
+    <p class="hint">Sortert etter poengsum. Deaktiverte brukere vises grået ut.</p>
+    <div id="adminFremdriftListe" class="findList"></div>
+  </div>
 </div>
 
 <!-- Funnliste -->
@@ -261,10 +269,10 @@
      Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
      sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
      allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
-<script src="js/api-client.js?v=0.9.32"></script>
-<script src="js/offline-queue.js?v=0.9.32"></script>
-<script src="js/ki-client.js?v=0.9.32"></script>
-<script src="js/map.js?v=0.9.32"></script>
-<script src="js/app.js?v=0.9.32"></script>
+<script src="js/api-client.js?v=0.9.33"></script>
+<script src="js/offline-queue.js?v=0.9.33"></script>
+<script src="js/ki-client.js?v=0.9.33"></script>
+<script src="js/map.js?v=0.9.33"></script>
+<script src="js/app.js?v=0.9.33"></script>
 </body>
 </html>

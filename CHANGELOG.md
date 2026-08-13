@@ -1,5 +1,52 @@
 # Endringslogg
 
+## 0.9.33 — Fase E (ekte øy-navn for Øyhopper) + Fase B (admin-fremdriftsoversikt)
+
+### Fase E: Øyhopper bruker nå ekte, navngitte øyer
+Erstattet den tidligere 120m-avstandsklyngingen i Øyhopper-beregningen med
+faktisk kystlinjegeometri fra OpenStreetMap. Presisjonsundersøkelse kjørt
+manuelt mot Overpass API (skoped til appens egen `MAP_MAX_BOUNDS`) før
+implementasjon: **27 distinkte øyer** finnes innenfor kartgrensa, ikke bare
+de 3 allerede navngitte — **17 har offisielt navn** (Sentralt
+stedsnavnregister, `ssr:stedsnr`), 10 er navnløse skjær. Geometrisk
+presisjon (~18m gjennomsnittlig punktavstand for Bondøya sin kystlinje)
+er langt bedre enn den gamle 120m-terskelen.
+
+Ny `worker/api/scripts/hent-oyer.mjs` (engangs/sjelden-kjørt, ingen cron —
+kystlinjer endrer seg ikke) genererer `src/data/oyer-bondoya.json`,
+bundlet statisk inn i Workeren (`with { type: 'json' }`, samme mønster som
+`data/species.json`). Ny `worker/api/src/lib/oyer.js` gjør punkt-i-polygon
+(`finnOy(lat, lon)`) for hvert funn. Én relasjon (`19171881`) ekskludert
+eksplisitt — verifisert som en OSM-datafeil (gjenbruker Risøya sine
+medlemsveier, men med Bondøyas kystlinje i stedet for Risøyas lukkeway,
+gir en meningsløs sammenslått form).
+
+Produktbeslutning: en øy uten offisielt navn telles fortsatt som en egen,
+distinkt øy for Øyhopper (ikke slått sammen med nærmeste navngitte øy,
+ikke ekskludert) — vises bare som "et navnløst skjær" i teksten.
+
+`"X adskilte steder besøkt"` → `"X øyer besøkt: Bondøya, Liss-Bondøya …"`
+(navnene inkludert både i "Min fremdrift" sin Øyhopper-linje og i
+Øyhopper/Øyhopper II-merkenes beskrivelse når opptjent — samme mønster
+som Rødlistejegers art-spesifikke beskrivelse fra tidligere samme dag).
+
+### Fase B: admin-oversikt over alles fremdrift
+Ny `GET /admin/fremdrift` (`requireAdmin()`-gatet, 403 ellers) — kaller
+den **uendrede** `beregnFremdrift()` per bruker (10-15 brukere, billig) og
+returnerer et sammendrag (poengsum, antall merker oppnådd, antall arter)
+sortert etter poengsum, uten å duplisere noen poenglogikk. Ny 6.
+admin-arkfane "Fremdrift" viser listen, deaktiverte brukere gråtonet
+(ikke filtrert bort — kun permanent slettede er utelatt, samme mønster
+som `listBrukere()`).
+
+Verifisert lokalt: funn registrert på Bondøya/Liss-Bondøya sine reelle
+koordinater slår nå korrekt ut som `{"navn":"Bondøya"}`/
+`{"navn":"Liss-Bondøya"}` i stedet for en anonym klyngetelling, en ny
+Øyhopper-registrering utløser riktig `nyeMerker`-varsel (se
+poeng/merke-varsel-funksjonen fra tidligere samme dag) med begge
+øynavnene i beskrivelsen, `/admin/fremdrift` returnerer korrekt sortert
+liste for en admin-sesjon og 403 for en vanlig bruker.
+
 ## Rødlistejeger viser nå hvilken art som utløste merket (ingen app-versjonsendring)
 Produkttilbakemelding samme dag som 0.9.32: Rødlistejeger-beskrivelsen var
 fortsatt generisk ("Første funn av en rødlistet (truet) art.") selv etter

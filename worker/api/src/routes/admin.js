@@ -5,6 +5,7 @@ import { erFunnSynligForPublic, settFunnSynligForPublic } from '../lib/innstilli
 import { parseSideRad, validerSideFelter } from '../lib/sider.js';
 import { randomToken, sha256Hex } from '../lib/crypto.js';
 import { validerEpost } from '../lib/invitasjoner.js';
+import { beregnFremdrift } from '../lib/fremdrift.js';
 
 export async function listBrukere({ request, env }) {
   const cors = corsHeaders(env);
@@ -436,4 +437,39 @@ export async function hentDashboard({ request, env }) {
     200,
     cors
   );
+}
+
+// Fase B — admin-oversikt over alles fremdrift, se konsept.md "Stegvis
+// innføringsplan". Gjenbruker beregnFremdrift() UENDRET per bruker (samme
+// funksjon som GET /meg/fremdrift kaller for seg selv) — ingen egen
+// admin-spesifikk poenglogikk her, bare et sammendrag av samme beregning
+// for alle. Deaktiverte brukere er MED (ikke filtrert bort server-side,
+// status sendes med slik at klienten kan gråne dem ut) — kun permanent
+// slettede (slettet_tidspunkt) er utelatt, samme mønster som listBrukere().
+export async function hentAdminFremdrift({ request, env }) {
+  const cors = corsHeaders(env);
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
+
+  const { results: brukere } = await env.DB.prepare(
+    `SELECT id, kortnavn, status FROM brukere WHERE slettet_tidspunkt IS NULL ORDER BY kortnavn`
+  ).all();
+
+  const oversikt = await Promise.all(
+    brukere.map(async (bruker) => {
+      const f = await beregnFremdrift(bruker.id, env);
+      return {
+        brukerId: bruker.id,
+        kortnavn: bruker.kortnavn,
+        status: bruker.status,
+        poengsum: f.score.totalt,
+        antallMerkerOppnadd: f.badges.filter((b) => b.opptjent).length,
+        antallMerkerTotalt: f.badges.length,
+        antallArter: f.antallArter,
+      };
+    })
+  );
+
+  oversikt.sort((a, b) => b.poengsum - a.poengsum);
+  return json(oversikt, 200, cors);
 }

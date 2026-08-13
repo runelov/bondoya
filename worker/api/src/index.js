@@ -12,6 +12,7 @@ import {
   listSkjulteArter, skjulArt, visArtIgjen,
   settArtsbeskrivelse,
   hentDashboard,
+  hentAdminFremdrift,
 } from './routes/admin.js';
 import { listFunnOffentlig, hentOffentligInnstillinger } from './routes/offentlig.js';
 import { hentFlis } from './routes/tiles.js';
@@ -62,6 +63,7 @@ router.get('/admin/skjulte-arter', listSkjulteArter);
 router.post('/admin/skjulte-arter', skjulArt);
 router.delete('/admin/skjulte-arter/:taxonId', visArtIgjen);
 router.get('/admin/dashboard', hentDashboard);
+router.get('/admin/fremdrift', hentAdminFremdrift);
 
 export default {
   async fetch(request, env, ctx) {

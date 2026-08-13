@@ -273,6 +273,14 @@ async function hentAdminDashboard() {
   return res.json();
 }
 
+// Fase B — admin-oversikt over alles fremdrift, se worker/api/src/routes/
+// admin.js sin hentAdminFremdrift(). Sortert etter poengsum av serveren.
+async function hentAdminFremdrift() {
+  const res = await kall('/admin/fremdrift');
+  if (!res.ok) throw new Error(`Kunne ikke hente fremdrift-oversikt (${res.status}).`);
+  return res.json();
+}
+
 // Personlig fremdrift (poeng, badges, artstype-dekning, øyhopper) — se
 // worker/api/src/lib/fremdrift.js. Beregnet live server-side, ingen
 // klientside-scoring-logikk her.
@@ -397,6 +405,7 @@ window.ApiClient = {
   skjulArt,
   visArtIgjen,
   hentAdminDashboard,
+  hentAdminFremdrift,
   hentFremdrift,
   sokArter,
   hentArtsbeskrivelse,

@@ -1,4 +1,5 @@
 import { ARTSTYPER, RODLISTE_LABELS } from './taxonomi.js';
+import { finnOy } from './oyer.js';
 
 // Fase A — personlig fremdrift (poeng, badges, artstype-dekning, øyhopper),
 // se konsept.md "Gamification: personlig fremdrift, poeng og badges".
@@ -10,12 +11,6 @@ import { ARTSTYPER, RODLISTE_LABELS } from './taxonomi.js';
 // (REFERANSEDATA-cachen / fylkesoppslag) flyttet server-side under Fase C,
 // men å veve dem inn i selve poengsummen er ikke et Fase A-leveranse-punkt
 // per konsept.md sin "Stegvis innføringsplan" — ikke glemt, bevisst utsatt.
-
-// v1: avstandsklynging av brukerens egne funn — se konsept.md "Øyhopper —
-// landmasse-definisjon". 120m er en startverdi, IKKE kalibrert visuelt mot
-// satellittlaget ennå (konsept.md sier eksplisitt dette bør gjøres) — juster
-// denne konstanten når det er gjort, ingen andre endringer nødvendig.
-const OYHOPPER_TERSKEL_METER = 120;
 
 // Ingen av disse tallene (utover 1p/registrering og 3p/ny art, som er gitt
 // direkte i konsept.md sin Poengmodell-tabell) er spesifisert numerisk der —
@@ -39,40 +34,22 @@ const ARTSSAMLER_TERSKLER = [10, 25, 50];
 // uavhengig av hvilket ikon klienten velger å vise ved siden av.
 const ARTSSAMLER_NAVN = ['Artssamler', 'Ivrig artssamler', 'Artsmester'];
 
-function haversineMeter(a, b) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lon - a.lon);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-// Union-find over brukerens egne funn-koordinater — O(n²), akseptabelt på
-// denne skalaen (typisk titalls, høyst noen hundre funn per bruker).
-function tellKlynger(punkter, terskelMeter) {
-  const n = punkter.length;
-  if (n === 0) return 0;
-  const parent = Array.from({ length: n }, (_, i) => i);
-  const finn = (x) => {
-    while (parent[x] !== x) {
-      parent[x] = parent[parent[x]];
-      x = parent[x];
-    }
-    return x;
-  };
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      if (haversineMeter(punkter[i], punkter[j]) <= terskelMeter) {
-        const ri = finn(i);
-        const rj = finn(j);
-        if (ri !== rj) parent[ri] = rj;
-      }
-    }
-  }
-  return new Set(Array.from({ length: n }, (_, i) => finn(i))).size;
+// Norsk tekst for en liste besøkte øyer, delt mellom scoreelementets
+// detalj-tekst og de to Øyhopper-merkenes beskrivelse — se lib/oyer.js
+// for selve punkt-i-polygon-oppslaget. "et navnløst skjær"/"N navnløse
+// skjær" for øyer uten offisielt navn (10 av 27, se
+// scripts/hent-oyer.mjs) — bevisst fortsatt talt med, bare uten navn,
+// jf. produktbeslutning 2026-08-13 (ikke slått sammen med nærmeste
+// navngitte øy, ikke ekskludert).
+function beskrivOyer(besokteOyer) {
+  const navngitte = besokteOyer.filter((o) => o.navn).map((o) => o.navn);
+  const antallNavnlose = besokteOyer.length - navngitte.length;
+  const deler = [...navngitte];
+  if (antallNavnlose === 1) deler.push('et navnløst skjær');
+  else if (antallNavnlose > 1) deler.push(`${antallNavnlose} navnløse skjær`);
+  if (deler.length === 0) return '';
+  if (deler.length === 1) return deler[0];
+  return `${deler.slice(0, -1).join(', ')} og ${deler[deler.length - 1]}`;
 }
 
 // Årstid fra funnets EGET tidspunkt (observasjonstidspunktet brukeren
@@ -156,11 +133,15 @@ export async function beregnFremdrift(brukerId, env) {
       artNorsk: funn.find((f) => f.art_taxon_id === artTaxonId)?.art_norsk ?? null,
     }));
 
-  // --- øyhopper ---
-  const klynger = tellKlynger(
-    funn.map((f) => ({ lat: f.lat, lon: f.lon })),
-    OYHOPPER_TERSKEL_METER
-  );
+  // --- øyhopper — ekte, navngitte øy-polygoner (lib/oyer.js), erstatter
+  // den tidligere 120m-avstandsklyngingen, se konsept.md "Øyhopper —
+  // landmasse-definisjon" og plan-notatet 2026-08-13. Funn som ikke treffer
+  // noen kjent øy (upresis GPS helt ved en strand, eller åpent hav) telles
+  // ikke — se lib/oyer.js sin finnOy()-dokumentasjon for denne avgrensningen.
+  const oyPerFunn = funn.map((f) => finnOy(f.lat, f.lon)).filter(Boolean);
+  const besokteOyerMap = new Map(oyPerFunn.map((o) => [o.id, o]));
+  const besokteOyer = [...besokteOyerMap.values()];
+  const antallOyer = besokteOyer.length;
 
   // --- årstidene rundt ---
   const distinkteSesonger = new Set(funn.map((f) => sesong(f.tidspunkt)));
@@ -171,7 +152,7 @@ export async function beregnFremdrift(brukerId, env) {
     artstyper: distinkteArtstyper.size * POENG.NY_ARTSTYPE,
     rodliste: rodlistePoeng,
     oppdager: oppdagetArter.length * POENG.OPPDAGER,
-    oyhopper: Math.max(0, klynger - 1) * POENG.OYHOPPER_PER_EKSTRA_KLYNGE,
+    oyhopper: Math.max(0, antallOyer - 1) * POENG.OYHOPPER_PER_EKSTRA_KLYNGE,
   };
   const totalt = Object.values(score).reduce((a, b) => a + b, 0);
 
@@ -214,16 +195,23 @@ export async function beregnFremdrift(brukerId, env) {
     {
       nokkel: 'oyhopper_2',
       navn: 'Øyhopper',
-      beskrivelse: 'Funn på minst 2 adskilte steder.',
-      opptjent: klynger >= 2,
-      progresjon: { naa: klynger, mal: 2 },
+      // Var "Funn på minst 2 adskilte steder." — "steder" byttet til "øyer"
+      // og beskrivelsen nevner nå de faktiske øyene (samme mønster som
+      // Rødlistejeger, produkttilbakemelding 2026-08-13), siden Øyhopper nå
+      // er basert på ekte, navngitte øy-polygoner (lib/oyer.js) i stedet
+      // for en anonym avstandsklynge.
+      beskrivelse:
+        antallOyer >= 2 ? `Funn på minst 2 øyer — ${beskrivOyer(besokteOyer)}.` : 'Funn på minst 2 øyer.',
+      opptjent: antallOyer >= 2,
+      progresjon: { naa: antallOyer, mal: 2 },
     },
     {
       nokkel: 'oyhopper_3',
       navn: 'Øyhopper II',
-      beskrivelse: 'Funn på minst 3 adskilte steder.',
-      opptjent: klynger >= 3,
-      progresjon: { naa: klynger, mal: 3 },
+      beskrivelse:
+        antallOyer >= 3 ? `Funn på minst 3 øyer — ${beskrivOyer(besokteOyer)}.` : 'Funn på minst 3 øyer.',
+      opptjent: antallOyer >= 3,
+      progresjon: { naa: antallOyer, mal: 3 },
     },
     {
       nokkel: 'arstidene_rundt',
@@ -243,13 +231,17 @@ export async function beregnFremdrift(brukerId, env) {
         { nokkel: 'artstyper', etikett: 'Artstype-dekning', poeng: score.artstyper, detalj: `${distinkteArtstyper.size} av ${ARTSTYPER.length} artstyper` },
         { nokkel: 'rodliste', etikett: 'Rødlistede arter', poeng: score.rodliste, detalj: `${rodlisteArter.length} rødlistede arter` },
         { nokkel: 'oppdager', etikett: 'Oppdager-bonus', poeng: score.oppdager, detalj: `${oppdagetArter.length} arter registrert først i fellesskapet` },
-        { nokkel: 'oyhopper', etikett: 'Øyhopper', poeng: score.oyhopper, detalj: `${klynger} adskilte steder besøkt` },
+        { nokkel: 'oyhopper', etikett: 'Øyhopper', poeng: score.oyhopper, detalj: `${antallOyer} øyer besøkt` },
       ],
     },
+    // Rått tall i tillegg til score.elementer sin tekstlige "detalj" —
+    // brukt av admin-oversikten (routes/admin.js sin hentAdminFremdrift())
+    // for å slippe å parse et menneskelesbart strengfelt for å få tallet ut.
+    antallArter,
     artstypeDekning: { totalt: ARTSTYPER.length, dekket: distinkteArtstyper.size, typer: artstypeTyper },
     rodliste: { arter: rodlisteArter },
     oppdagetArter,
-    oyhopper: { klynger, terskelMeter: OYHOPPER_TERSKEL_METER },
+    oyhopper: { antallOyer, oyer: besokteOyer },
     badges,
   };
 }
