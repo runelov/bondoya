@@ -1,5 +1,23 @@
 # Endringslogg
 
+## Rødlistejeger viser nå hvilken art som utløste merket (ingen app-versjonsendring)
+Produkttilbakemelding samme dag som 0.9.32: Rødlistejeger-beskrivelsen var
+fortsatt generisk ("Første funn av en rødlistet (truet) art.") selv etter
+at merket var opptjent — brukeren måtte gjette hvilken art det faktisk var.
+`beregnFremdrift()` (`worker/api/src/lib/fremdrift.js`) finner nå den
+først registrerte rødlistede arten (etter `opprettet`, ikke nødvendigvis
+den mest alvorlige kategorien — det er fortsatt `rodliste.arter` sin jobb)
+og setter beskrivelsen til f.eks. "Første funn av en rødlistet (truet)
+art — Krykkje, sterkt truet (EN)." Ny `RODLISTE_LABELS`-oversettelse i
+`worker/api/src/lib/taxonomi.js` (samme kategorier/ord som `js/app.js` sin
+klientside `RODLISTE_LABELS` — duplisert med vilje, samme begrunnelse som
+`RODLISTE_KATEGORIER`-allow-listen ved siden av). Ingen kode i
+`bondoya/js|css|index.html` er endret, så `APP_VERSION` er ikke rørt.
+
+Verifisert lokalt: en bruker med Krykkje som første rødlistede funn får
+nettopp denne teksten; en fersk bruker uten rødlistede funn beholder den
+generiske, ikke-opptjente teksten uendret.
+
 ## 0.9.32 — Poeng/merke-varsel rett ved registrering
 Til nå måtte brukeren selv åpne "Min fremdrift" for å oppdage at et funn ga
 poeng eller et nytt merke. `POST /funn` (`opprettFunn()` i

@@ -1,4 +1,4 @@
-import { ARTSTYPER } from './taxonomi.js';
+import { ARTSTYPER, RODLISTE_LABELS } from './taxonomi.js';
 
 // Fase A — personlig fremdrift (poeng, badges, artstype-dekning, øyhopper),
 // se konsept.md "Gamification: personlig fremdrift, poeng og badges".
@@ -133,6 +133,15 @@ export async function beregnFremdrift(brukerId, env) {
   }));
   const rodlistePoeng = rodlisteArter.reduce((sum, r) => sum + POENG.RODLISTE[r.kategori], 0);
 
+  // Arten som faktisk UTLØSTE Rødlistejeger-merket — den først registrerte
+  // (etter opprettet) rødlistede funnet, ikke nødvendigvis den mest
+  // alvorlige kategorien brukeren har (det er rodlisteArter sitt formål).
+  // Brukt til å gjøre merkebeskrivelsen konkret i stedet for generisk, se
+  // produkttilbakemelding 2026-08-13.
+  const rodlisteTrigger = funn
+    .filter((f) => f.rodlistekategori)
+    .sort((a, b) => (a.opprettet < b.opprettet ? -1 : 1))[0] ?? null;
+
   // --- oppdager-bonus ---
   const egenForstePerArt = new Map();
   for (const f of funn) {
@@ -179,8 +188,13 @@ export async function beregnFremdrift(brukerId, env) {
       // Var "Første NT/VU/EN/CR-funn." — for teknisk (rå rødliste-koder),
       // produkttilbakemelding 2026-08-13. "Rødlistet" er allerede et kjent
       // begrep i appen (se rodlisteBadge() i funndetaljer), her paret med
-      // et vanlig ord i stedet for kodene.
-      beskrivelse: 'Første funn av en rødlistet (truet) art.',
+      // et vanlig ord i stedet for kodene. Utvidet samme dag til å nevne
+      // hvilken art som faktisk utløste merket (rodlisteTrigger over), ikke
+      // bare beskrive kriteriet generisk — konkret er mer motiverende enn
+      // abstrakt, og brukeren har allerede spurt "hvilken art var det?".
+      beskrivelse: rodlisteTrigger
+        ? `Første funn av en rødlistet (truet) art — ${rodlisteTrigger.art_norsk}, ${RODLISTE_LABELS[rodlisteTrigger.rodlistekategori]} (${rodlisteTrigger.rodlistekategori}).`
+        : 'Første funn av en rødlistet (truet) art.',
       opptjent: rodlisteArter.length > 0,
     },
     ...ARTSSAMLER_TERSKLER.map((mal, i) => ({

@@ -75,6 +75,13 @@ export function utledArtstype(taxon) {
 // gratis".
 const RODLISTE_KATEGORIER = new Set(['NT', 'VU', 'EN', 'CR']);
 
+// Samme oversettelse som js/app.js sin RODLISTE_LABELS (rodlisteBadge()) —
+// duplisert med vilje, samme begrunnelse som allow-listen over. Brukt av
+// lib/fremdrift.js til å skrive et lesbart artsnavn+kategori inn i
+// Rødlistejeger-merkets beskrivelse (se beregnFremdrift()), i stedet for
+// bare den rå koden.
+export const RODLISTE_LABELS = { NT: 'nær truet', VU: 'sårbar', EN: 'sterkt truet', CR: 'kritisk truet' };
+
 // Taxon-responsen fra Artskart sitt taxon-API inneholder allerede
 // rødlistekategori i TaxonTags (TagGroup "Norsk Rødliste 2021", f.eks.
 // {TagGroup: "Norsk Rødliste 2021", Context: "N", Tag: "NT"}).
