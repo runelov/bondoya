@@ -1,0 +1,13 @@
+-- Rødlistekategori for funn med kjent taxonId — Artskart sin TaxonTags-liste
+-- (TagGroup "Norsk Rødliste 2021") inneholder allerede feltet i responsen
+-- hentAutoritativArtstype() (lib/taxonomi.js) henter ved lagring, uten at
+-- koden i dag leser det. Kun NT/VU/EN/CR lagres (allow-liste i taxonomi.js,
+-- samme kategorier som js/app.js sin RODLISTE_LABELS) — LC/DD/NA og alt
+-- annet lagres som NULL. Se konsept.md "Rødlistekategori — løst, nær
+-- gratis" og "Lagringsvurdering".
+--
+-- Bevisst en enkel ALTER TABLE ADD COLUMN (ingen CHECK-constraint, samme
+-- begrunnelse som 0016) — nullable TEXT. Eksisterende funn får NULL og
+-- krever en engangs-backfill (scripts/foresla-rodlistekategori-backfill.mjs)
+-- for å fylles retroaktivt.
+ALTER TABLE funn ADD COLUMN rodlistekategori TEXT;

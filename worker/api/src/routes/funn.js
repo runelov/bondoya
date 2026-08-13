@@ -36,10 +36,10 @@ export async function opprettFunn({ request, env }) {
 
   const rad = await env.DB.prepare(
     `INSERT INTO funn (
-       art_norsk, art_latinsk, art_taxon_id, artstype, lat, lon, tidspunkt,
+       art_norsk, art_latinsk, art_taxon_id, artstype, rodlistekategori, lat, lon, tidspunkt,
        bilde_r2_key, ki_konfidens, ki_alternativer,
        registrert_av_bruker_id, registrert_av_kortnavn, synlig_for_public
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      RETURNING *`
   )
     .bind(
@@ -47,6 +47,7 @@ export async function opprettFunn({ request, env }) {
       felter.artLatinsk,
       felter.artTaxonId,
       felter.artstype,
+      felter.rodlistekategori,
       felter.lat,
       felter.lon,
       felter.tidspunkt,
@@ -89,7 +90,7 @@ export async function oppdaterFunn({ request, env, params }) {
 
   const rad = await env.DB.prepare(
     `UPDATE funn SET
-       art_norsk = ?, art_latinsk = ?, art_taxon_id = ?, artstype = ?,
+       art_norsk = ?, art_latinsk = ?, art_taxon_id = ?, artstype = ?, rodlistekategori = ?,
        lat = ?, lon = ?, tidspunkt = ?, synlig_for_public = ?
      WHERE id = ?
      RETURNING *`
@@ -99,6 +100,7 @@ export async function oppdaterFunn({ request, env, params }) {
       felter.artLatinsk,
       felter.artTaxonId,
       felter.artstype,
+      felter.rodlistekategori,
       felter.lat,
       felter.lon,
       felter.tidspunkt,

@@ -67,15 +67,47 @@ export function utledArtstype(taxon) {
   return 'annet';
 }
 
-// Autoritativt taxonId → artstype-oppslag brukt ved lagring/redigering av
-// funn (se validerFunnFelter i lib/funn.js) — klienten sender riktignok
-// alltid en artstype selv (fra søket, som allerede har kjørt utledArtstype()
-// på treffet), men serveren stoler aldri på den når en taxonId finnes, av
-// samme grunn som synlig_for_public aldri stoler på klienten (se
-// artsvisibility.js): en fremtidig klientbug skal ikke kunne lagre feil
-// artstype for et funn som faktisk har en kjent taxonId. Returnerer null
-// (ikke en feil) ved oppslagsfeil — kalleren faller da tilbake til
-// klientens artstype, siden en midlertidig Artsdatabanken-feil ikke skal
+// Speiler js/app.js sin RODLISTE_LABELS-nøkkelmengde — bevisst en egen,
+// server-side allow-liste (ikke en import fra klientkoden, de to
+// kjøretidene deler ingen moduler) — samme kategori-sett må holdes i synk
+// manuelt ved fremtidige rødliste-revisjoner. Kun NT/VU/EN/CR teller som
+// rødlistet, aldri LC/DD/NA, se konsept.md "Rødlistekategori — løst, nær
+// gratis".
+const RODLISTE_KATEGORIER = new Set(['NT', 'VU', 'EN', 'CR']);
+
+// Taxon-responsen fra Artskart sitt taxon-API inneholder allerede
+// rødlistekategori i TaxonTags (TagGroup "Norsk Rødliste 2021", f.eks.
+// {TagGroup: "Norsk Rødliste 2021", Context: "N", Tag: "NT"}).
+//
+// VIKTIG, oppdaget under manuell verifisering 2026-08-13 (steinkobbe,
+// taxonId 31199, og krykkje, taxonId 203546): noen arter har TO slike
+// tagger i samme respons — Context "N" (fastlands-Norge) OG Context "S"
+// (Svalbard), med ulik kategori (steinkobbe er N:LC, men S:NT). Bondøya er
+// i Trøndelag, IKKE Svalbard — filteret må derfor eksplisitt kreve
+// Context === 'N', ikke bare TagGroup-navnet, ellers kan et usikkert
+// array-rekkefølge-avhengig .find()-treff plukke Svalbard-kategorien for en
+// fastlandsart. Returnerer null for alt utenfor allow-listen over (LC/DD/NA,
+// ingen N-kontekst-tag, eller ingen slik tag i det hele tatt).
+function utledRodlistekategori(taxon) {
+  const tags = Array.isArray(taxon.TaxonTags) ? taxon.TaxonTags : [];
+  const tag = tags.find((t) => t.TagGroup === 'Norsk Rødliste 2021' && t.Context === 'N');
+  return tag && RODLISTE_KATEGORIER.has(tag.Tag) ? tag.Tag : null;
+}
+
+// Autoritativt taxonId → artstype-/rødlistekategori-oppslag brukt ved
+// lagring/redigering av funn (se validerFunnFelter i lib/funn.js) —
+// klienten sender riktignok alltid en artstype selv (fra søket, som
+// allerede har kjørt utledArtstype() på treffet), men serveren stoler
+// aldri på den når en taxonId finnes, av samme grunn som synlig_for_public
+// aldri stoler på klienten (se artsvisibility.js): en fremtidig klientbug
+// skal ikke kunne lagre feil artstype for et funn som faktisk har en kjent
+// taxonId. Utvidet 2026-08-13 til også å returnere rodlistekategori — samme
+// ene kallet dekker begge, ingen ekstra nettverkstrafikk (se konsept.md
+// "Rødlistekategori — løst, nær gratis"). Navnet er bevisst beholdt
+// uendret selv om omfanget er utvidet — kun ett kallested (lib/funn.js).
+// Returnerer null (ikke en feil, og ikke et delvis objekt) ved
+// oppslagsfeil — kalleren faller da tilbake til klientens artstype og
+// null-rødliste, siden en midlertidig Artsdatabanken-feil ikke skal
 // blokkere registrering.
 export async function hentAutoritativArtstype(taxonId) {
   if (!taxonId) return null;
@@ -84,7 +116,7 @@ export async function hentAutoritativArtstype(taxonId) {
     if (!res.ok) return null;
     const taxon = await res.json();
     if (!taxon || !taxon.TaxonId) return null;
-    return utledArtstype(taxon);
+    return { artstype: utledArtstype(taxon), rodlistekategori: utledRodlistekategori(taxon) };
   } catch {
     return null;
   }

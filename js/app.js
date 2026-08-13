@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.28';
+const APP_VERSION = '0.9.29';
 const APP_BUILD_DATE = '2026-08-13';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireRegisterFlow();
   wireInviterPanel();
   wireDashboardPanel();
+  wireFremdriftPanel();
   wireSheetDismiss();
 
   await haandterInvitasjonFraUrl();
@@ -257,6 +258,9 @@ function renderAccountPanel(){
   // skjer server-side (requireSession på POST /funn og GET /tiles/...).
   el('fabRegister').hidden = !brukerCache;
   el('fabGallery').hidden = !brukerCache;
+  // Min fremdrift: synlig for enhver innlogget bruker, ikke admin-gated —
+  // se konsept.md "Gamification: personlig fremdrift, poeng og badges".
+  el('fremdriftToggle').hidden = !brukerCache;
   // Funnliste-knapp: alltid synlig for innloggede (de ser alltid alle egne
   // funn), men skjult for besøkende når admin har skrudd av offentlig
   // funnvisning (eller mens vi ennå ikke har fått bekreftet flagget —
@@ -454,6 +458,48 @@ async function renderAdminDashboard(){
       ${statKort(d.invitasjoner.ubruktGyldig, 'Ubrukt, gyldig')}
       ${statKort(d.invitasjoner.utlopt, 'Utløpt')}
     </div>`;
+}
+
+// ---------- min fremdrift ----------
+// Personlig score/badges/artstype-dekning/øyhopper — se GET /meg/fremdrift
+// (worker/api/src/lib/fremdrift.js). All beregning skjer server-side; denne
+// funksjonen gjør bare presentasjon, ingen egen poenglogikk her.
+
+function wireFremdriftPanel(){
+  el('fremdriftToggle').addEventListener('click', async () => {
+    toggleSheet('fremdriftPanel', true);
+    await renderFremdrift();
+  });
+}
+
+async function renderFremdrift(){
+  const container = el('fremdriftInnhold');
+  container.innerHTML = '<p class="hint">Laster …</p>';
+  let f;
+  try {
+    f = await window.ApiClient.hentFremdrift();
+  } catch (e) {
+    container.innerHTML = `<p class="hint">Kunne ikke hente fremdrift: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  const elementKort = f.score.elementer.map(e => statKort(e.poeng, e.etikett)).join('');
+  const artstypeListe = f.artstypeDekning.typer.map(t =>
+    `<span class="pill${t.dekket ? '' : ' pillUdekket'}">${escapeHtml(t.artstype.charAt(0).toUpperCase() + t.artstype.slice(1))}</span>`
+  ).join(' ');
+  const badgeListe = f.badges.map(b => {
+    const progresjon = b.progresjon ? ` (${b.progresjon.naa}/${b.progresjon.mal})` : '';
+    return `<li class="${b.opptjent ? 'badgeOpptjent' : 'badgeLast'}">${b.opptjent ? '✓' : '—'} ${escapeHtml(b.navn)}${progresjon} — ${escapeHtml(b.beskrivelse)}</li>`;
+  }).join('');
+
+  container.innerHTML = `
+    <h3>Poengsum: ${f.score.totalt}</h3>
+    <div class="statGrid">${elementKort}</div>
+    <p class="hint"><strong>Artstype-dekning (${f.artstypeDekning.dekket}/${f.artstypeDekning.totalt}):</strong></p>
+    <p>${artstypeListe}</p>
+    <p class="hint"><strong>Øyhopper:</strong> ${f.oyhopper.klynger} adskilte steder besøkt.</p>
+    <p class="hint"><strong>Badges:</strong></p>
+    <ul>${badgeListe}</ul>`;
 }
 
 async function renderInnstillinger(){
@@ -1944,7 +1990,7 @@ function rodlisteBadge(kode){
 function toggleSheet(id, force){
   const sheet = el(id);
   const show = force !== undefined ? force : sheet.hidden;
-  ['listPanel','detailPanel','registerPanel','accountPanel','adminPanel','sidePanel','inviterPanel','dashboardPanel'].forEach(other => {
+  ['listPanel','detailPanel','registerPanel','accountPanel','adminPanel','sidePanel','inviterPanel','dashboardPanel','fremdriftPanel'].forEach(other => {
     if (other !== id) el(other).hidden = true;
   });
   sheet.hidden = !show;

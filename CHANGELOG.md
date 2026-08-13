@@ -1,5 +1,31 @@
 # Endringslogg
 
+## 0.9.29 — Fase A gamification: Min fremdrift (poeng, badges, artstype-dekning, øyhopper)
+Første del av gamification-konseptet i `konsept.md` ("Gamification:
+personlig fremdrift, poeng og badges") — kun **Fase A** (personlig
+fremdriftsside). Fase B (admin-oversikt), Fase D (leaderboard) og Fase E
+(øy-polygoner) er ikke del av denne endringen.
+
+Ny `GET /meg/fremdrift` (sesjonsbeskyttet, 401 uten sesjon) beregner poeng
+og badges **on-the-fly** direkte fra `funn` — ingen ny poeng-/badge-tabell,
+jf. konsept.md sin eksplisitte v1-beslutning. Poengmodell: registreringer
+(flat), ulike arter, artstype-dekning (av 17 typer), rødlistede arter
+(NT/VU/EN/CR, trappetrinn), "oppdager"-bonus (først i fellesskapet til å
+registrere en art), og øyhopper (avstandsklynging av egne funn, 120m
+startterskel, ikke kalibrert visuelt ennå). Badges: Oppdageren,
+Rødlistejeger, Artssamler I/II/III, Mangfoldsmester, Øyhopper/Øyhopper II,
+Årstidene rundt. Ny fane "Min fremdrift" (📈) i appen, synlig for enhver
+innlogget bruker (ikke admin-only).
+
+Ny D1-kolonne `funn.rodlistekategori` (migrasjon 0017) — Artskart sitt
+taxon-API returnerer allerede rødlistekategori i samme respons
+`hentAutoritativArtstype()` (lib/taxonomi.js) henter ved lagring, uten at
+koden tidligere leste feltet. Gjør rødliste-dekning universell (enhver art
+med taxonId), ikke bare de 17 kuraterte artene i `data/species.json`.
+Bevisst **ikke** eksponert i `GET /funn/offentlig` (fail-closed, ingen
+uttalt behov). `scripts/foresla-rodlistekategori-backfill.mjs` (read-only,
+aldri auto-kjørt) foreslår kategori for funn registrert før migrasjonen.
+
 ## 0.9.28 — Avvikler ⚙️-innstillingspanelet (GhStore-migrasjonen fullføres)
 Siste gjenværende bruk av det gamle delt-PAT-mønsteret i Bondøya fjernet —
 FungiFinder gjorde tilsvarende opprydding tidligere. Frem til nå måtte en

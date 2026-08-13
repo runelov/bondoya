@@ -19,6 +19,7 @@ export function parseFunnRad(rad, innloggetBruker) {
       taxonId: rad.art_taxon_id,
     },
     artstype: rad.artstype,
+    rodlistekategori: rad.rodlistekategori,
     lat: rad.lat,
     lon: rad.lon,
     tidspunkt: rad.tidspunkt,
@@ -35,6 +36,12 @@ export function parseFunnRad(rad, innloggetBruker) {
 // Formen offentlige (uinnloggede) besøkende får se — jf. konsept.md
 // "Artssynlighet for offentlige besøkende": "registrert av" og alt
 // KI-relatert utelates helt fra responsen, ikke bare skjules i UI-en.
+// Bevisst UTEN rodlistekategori også (lagt til 2026-08-13, se Fase A i
+// konsept.md "Gamification") — ingen uttalt produktbehov for å eksponere
+// rødlistestatus til uinnloggede, og synlig_for_public over håndhever
+// allerede en streng, bevisst snever grense for rødlistede funn generelt
+// (se betruaTaxonId() i lib/artsvisibility.js) — fail-closed her også,
+// ikke legg feltet til uten en eksplisitt grunn.
 export function parseFunnRadOffentlig(rad) {
   return {
     id: rad.id,
@@ -80,8 +87,15 @@ export async function validerFunnFelter(felter, env) {
   // betruaTaxonId()). Faller tilbake til klientens artstype ved manglende
   // taxonId eller Artsdatabanken-feil (fail-open her er trygt — verste fall
   // er en feilkategorisert "annet" fremfor en lagringsfeil).
-  const autoritativArtstype = await hentAutoritativArtstype(artTaxonIdRaw);
-  const artstype = autoritativArtstype || felter.artstype;
+  const autoritativ = await hentAutoritativArtstype(artTaxonIdRaw);
+  const artstype = autoritativ?.artstype || felter.artstype;
+  // Utelukkende serverutledet — ingen klientfelt for dette. Fail-open (null)
+  // ved oppslagsfeil, samme resonnement som artstype over: et midlertidig
+  // Artsdatabanken-utfall skal ikke blokkere registrering. Kjent, bevisst
+  // akseptert konsekvens: redigering av et allerede rødlistet funn kan
+  // midlertidig nulle ut en kjent kategori ved et slikt utfall, identisk med
+  // artstypens eksisterende eksponering — ikke noe nytt problem.
+  const rodlistekategori = autoritativ?.rodlistekategori ?? null;
 
   const lat = parseFloat(felter.lat);
   const lon = parseFloat(felter.lon);
@@ -120,7 +134,7 @@ export async function validerFunnFelter(felter, env) {
   const artTaxonId = artTaxonIdRaw;
   const synligForPublic = await erSynligForPublic(betruaTaxonId(artTaxonIdRaw, artNorsk), env);
 
-  return { artNorsk, artLatinsk, artstype, artTaxonId, lat, lon, tidspunkt, kiKonfidens, kiAlternativer, synligForPublic };
+  return { artNorsk, artLatinsk, artstype, artTaxonId, rodlistekategori, lat, lon, tidspunkt, kiKonfidens, kiAlternativer, synligForPublic };
 }
 
 // Validerer og laster opp et bilde til R2. Returnerer R2-nøkkelen, eller

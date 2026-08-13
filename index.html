@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/styles.css?v=0.9.28">
+<link rel="stylesheet" href="css/styles.css?v=0.9.29">
 </head>
 <body>
 
@@ -28,6 +28,7 @@
   <button id="accountToggle" class="iconBtn" aria-label="Konto" title="Konto">👤</button>
   <div id="syncStatus" class="pill" hidden></div>
   <button id="listToggle" class="iconBtn" aria-label="Funnliste" title="Funnliste">📋</button>
+  <button id="fremdriftToggle" class="iconBtn" aria-label="Min fremdrift" title="Min fremdrift" hidden>📈</button>
   <button id="adminToggle" class="iconBtn" aria-label="Admin" title="Admin" hidden>🛡️</button>
 </header>
 
@@ -53,6 +54,13 @@
   </div>
   <!-- Sider (personvern osv.) — synlig uansett innloggingsstatus, listen filtreres server-side -->
   <div id="sideLenker"></div>
+</div>
+
+<!-- Min fremdrift: personlig score/badges/artstype-dekning/øyhopper, se GET /meg/fremdrift -->
+<div id="fremdriftPanel" class="sheet" hidden>
+  <div class="sheetHandle"></div>
+  <h2>Min fremdrift</h2>
+  <div id="fremdriftInnhold"></div>
 </div>
 
 <!-- Enkeltside (f.eks. personvern) -->
@@ -253,10 +261,10 @@
      Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
      sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
      allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
-<script src="js/api-client.js?v=0.9.28"></script>
-<script src="js/offline-queue.js?v=0.9.28"></script>
-<script src="js/ki-client.js?v=0.9.28"></script>
-<script src="js/map.js?v=0.9.28"></script>
-<script src="js/app.js?v=0.9.28"></script>
+<script src="js/api-client.js?v=0.9.29"></script>
+<script src="js/offline-queue.js?v=0.9.29"></script>
+<script src="js/ki-client.js?v=0.9.29"></script>
+<script src="js/map.js?v=0.9.29"></script>
+<script src="js/app.js?v=0.9.29"></script>
 </body>
 </html>

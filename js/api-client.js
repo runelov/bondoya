@@ -273,6 +273,15 @@ async function hentAdminDashboard() {
   return res.json();
 }
 
+// Personlig fremdrift (poeng, badges, artstype-dekning, øyhopper) — se
+// worker/api/src/lib/fremdrift.js. Beregnet live server-side, ingen
+// klientside-scoring-logikk her.
+async function hentFremdrift() {
+  const res = await kall('/meg/fremdrift');
+  if (!res.ok) throw new Error(`Kunne ikke hente fremdrift (${res.status}).`);
+  return res.json();
+}
+
 // Sesjonsbeskyttet KI-gjenkjenning — se worker/api/src/routes/ki.js. Denne
 // Workeren legger på den delte hemmeligheten mot worker/ki-proxy server-side,
 // så klienten trenger aldri å kjenne til noen delt hemmelighet selv.
@@ -388,6 +397,7 @@ window.ApiClient = {
   skjulArt,
   visArtIgjen,
   hentAdminDashboard,
+  hentFremdrift,
   sokArter,
   hentArtsbeskrivelse,
   hentArtMiniatyrbilde,
