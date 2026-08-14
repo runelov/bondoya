@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/styles.css?v=0.9.33">
+<link rel="stylesheet" href="css/styles.css?v=0.9.34">
 </head>
 <body>
 
@@ -209,7 +209,10 @@
 <!-- Funnliste -->
 <div id="listPanel" class="sheet" hidden>
   <div class="sheetHandle"></div>
-  <h2>Registrerte funn</h2>
+  <div class="findListHeader">
+    <h2>Registrerte funn</h2>
+    <button id="visningsmodusToggle" class="iconBtn" aria-label="Bytt til galleri-visning" title="Bytt til galleri-visning">🖼️</button>
+  </div>
   <div id="visningRow" class="filterRow"></div>
   <div id="sortGroupRow" class="sortGroupRow">
     <div class="sortGroupCol">
@@ -269,10 +272,10 @@
      Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
      sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
      allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
-<script src="js/api-client.js?v=0.9.33"></script>
-<script src="js/offline-queue.js?v=0.9.33"></script>
-<script src="js/ki-client.js?v=0.9.33"></script>
-<script src="js/map.js?v=0.9.33"></script>
-<script src="js/app.js?v=0.9.33"></script>
+<script src="js/api-client.js?v=0.9.34"></script>
+<script src="js/offline-queue.js?v=0.9.34"></script>
+<script src="js/ki-client.js?v=0.9.34"></script>
+<script src="js/map.js?v=0.9.34"></script>
+<script src="js/app.js?v=0.9.34"></script>
 </body>
 </html>

@@ -206,12 +206,15 @@ export async function beregnFremdrift(brukerId, env) {
       progresjon: { naa: antallOyer, mal: 2 },
     },
     {
-      nokkel: 'oyhopper_3',
+      // Var oyhopper_3/"minst 3 øyer" — hevet til 5 (tilbakemelding
+      // 2026-08-14), nøkkelen omdøpt til å matche så den ikke lyver om
+      // terskelen for en fremtidig leser.
+      nokkel: 'oyhopper_5',
       navn: 'Øyhopper II',
       beskrivelse:
-        antallOyer >= 3 ? `Funn på minst 3 øyer — ${beskrivOyer(besokteOyer)}.` : 'Funn på minst 3 øyer.',
-      opptjent: antallOyer >= 3,
-      progresjon: { naa: antallOyer, mal: 3 },
+        antallOyer >= 5 ? `Funn på minst 5 øyer — ${beskrivOyer(besokteOyer)}.` : 'Funn på minst 5 øyer.',
+      opptjent: antallOyer >= 5,
+      progresjon: { naa: antallOyer, mal: 5 },
     },
     {
       nokkel: 'arstidene_rundt',
@@ -231,7 +234,7 @@ export async function beregnFremdrift(brukerId, env) {
         { nokkel: 'artstyper', etikett: 'Artstype-dekning', poeng: score.artstyper, detalj: `${distinkteArtstyper.size} av ${ARTSTYPER.length} artstyper` },
         { nokkel: 'rodliste', etikett: 'Rødlistede arter', poeng: score.rodliste, detalj: `${rodlisteArter.length} rødlistede arter` },
         { nokkel: 'oppdager', etikett: 'Oppdager-bonus', poeng: score.oppdager, detalj: `${oppdagetArter.length} arter registrert først i fellesskapet` },
-        { nokkel: 'oyhopper', etikett: 'Øyhopper', poeng: score.oyhopper, detalj: `${antallOyer} øyer besøkt` },
+        { nokkel: 'oyhopper', etikett: 'Øyhopper', poeng: score.oyhopper, detalj: `funn registrert på ${antallOyer} øyer` },
       ],
     },
     // Rått tall i tillegg til score.elementer sin tekstlige "detalj" —

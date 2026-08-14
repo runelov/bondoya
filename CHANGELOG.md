@@ -1,5 +1,30 @@
 # Endringslogg
 
+## 0.9.34 — Merke-ikonstørrelse, Øyhopper II-terskel, galleri-visning
+Fire punkter fra produkttilbakemelding 2026-08-14:
+
+1. **Merke-ikoner så små ut inni ellers riktig store knapper** — `.merke`
+   brukte et fast `font-size: 21px` uansett hvor stor selve knappen faktisk
+   ble rendret (grid+`aspect-ratio`, varierer med skjermbredde). Byttet til
+   container query-basert relativ størrelse (`46cqw`) som alltid skalerer
+   proporsjonalt med knappens egen bredde. `.merkeDetaljIkon` fikk samme
+   type justering (20px → 24px i sin faste 44px-sirkel).
+2. **Øyhopper II hevet fra 3 til 5 øyer** — nøkkelen omdøpt fra
+   `oyhopper_3` til `oyhopper_5` samtidig, så den ikke lyver om terskelen
+   for en fremtidig leser av koden.
+3. **"X øyer besøkt" var upresist** — Øyhopper-mekanikken teller funn
+   registrert på en øy, ikke besøk generelt. Omformulert til "Funn
+   registrert på X øyer" både i score-sammendraget (`lib/fremdrift.js`) og
+   Min fremdrift-visningen (`app.js`).
+4. **Ny galleri-visning for Registrerte funn** — toggle (🖼️/📋-knapp) mellom
+   dagens tekstliste og et rutenett av større bilder (`.findGrid`/
+   `.findTile`), tilleggsinfo (art/dato) vist ved hover eller fokus via ren
+   CSS-overlay (`.findTileOverlay`) i stedet for alltid synlig tekst — klikk
+   åpner samme funndetalj-ark som listevisningen allerede gjør. Samme
+   filter/sortering/gruppering gjelder uendret i begge visninger. Realiserer
+   "Flere presentasjonsmodi for Registrerte funn" fra konsept.md sin
+   backlog (foreslått 2026-07-13).
+
 ## Utvidet Øyhopper-dekning til 3km radius (ingen app-versjonsendring)
 Produkttilbakemelding samme dag som 0.9.33: brukeren kunne se flere
 navngitte holmer (Tangholmen, Estenholmen, Emåholman, Brannholmen,

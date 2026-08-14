@@ -2,8 +2,8 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.33';
-const APP_BUILD_DATE = '2026-08-13';
+const APP_VERSION = '0.9.34';
+const APP_BUILD_DATE = '2026-08-14';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
 // ingen build-step som lar de to dele en fil, så listen må holdes i synk
@@ -26,6 +26,10 @@ let activeVisning = 'alle'; // 'alle' | 'mine' — se wireListPanel
 let activeSort = 'nyeste'; // se SORTERINGER/wireListPanel
 let activeGroup = 'ingen'; // se GRUPPERINGER/wireListPanel
 let kunUsikre = false; // admin-only filter, se wireListPanel
+// 'liste' | 'galleri' — se wireListPanel/renderList. Bevisst kun in-memory
+// (nullstilles ved omlasting), samme mønster som activeFilter/activeVisning
+// over — ingen av visningsvalgene i denne panelet er persistert i dag.
+let visningsmodus = 'liste';
 let brukerCache = null; // {epost, kortnavn, rolle} eller null — satt av sjekkSesjon()
 let offentligFunnSynlig = null; // null = ukjent enda (fail-closed inntil kjent), ellers boolean — se refreshFromRepo
 let adminInnstillingerCache = null; // {funnSynligForPublic} — kun lastet/relevant i adminPanel
@@ -505,7 +509,7 @@ const MERKE_IKONER = {
   artssamler_3: '🥇',
   mangfoldsmester: '🧩',
   oyhopper_2: '🏝️',
-  oyhopper_3: '🗺️',
+  oyhopper_5: '🗺️',
   arstidene_rundt: '🔄',
 };
 
@@ -616,7 +620,7 @@ async function renderFremdrift(){
     <h3>Artstype-dekning (${f.artstypeDekning.dekket}/${f.artstypeDekning.totalt})</h3>
     <div class="fremdriftChipWrap">${artstypeChips}</div>
     <h3>Øyhopper</h3>
-    <p class="hint">${f.oyhopper.antallOyer} øyer besøkt${beskrivOyerListe(f.oyhopper.oyer)}.</p>
+    <p class="hint">Funn registrert på ${f.oyhopper.antallOyer} øyer${beskrivOyerListe(f.oyhopper.oyer)}.</p>
     <h4>Oppnådd <span class="count">(${oppnadd.length}/${f.badges.length})</span></h4>
     <div class="merkeGrid">${oppnadd.map(merkeKnappHtml).join('') || '<p class="hint">Ingen merker oppnådd ennå.</p>'}</div>
     <h4>Gjenstående utfordringer <span class="count">(${gjenstaar.length}/${f.badges.length})</span></h4>
@@ -1762,6 +1766,19 @@ function wireListPanel(){
   el('listToggle').addEventListener('click', () => { renderSortRow(); renderList(); toggleSheet('listPanel'); });
   el('filterIndicator').addEventListener('click', () => { renderSortRow(); renderList(); toggleSheet('listPanel', true); });
 
+  // Galleri-visning (tilbakemelding 2026-08-14) — se renderList() for selve
+  // rutenett-malen. Ren visningsbryter, påvirker ikke activeFilter/
+  // activeVisning/activeSort/activeGroup, som fortsatt gjelder likt i begge.
+  el('visningsmodusToggle').addEventListener('click', () => {
+    visningsmodus = visningsmodus === 'liste' ? 'galleri' : 'liste';
+    const btn = el('visningsmodusToggle');
+    btn.classList.toggle('active', visningsmodus === 'galleri');
+    btn.textContent = visningsmodus === 'galleri' ? '📋' : '🖼️';
+    btn.setAttribute('aria-label', visningsmodus === 'galleri' ? 'Bytt til listevisning' : 'Bytt til galleri-visning');
+    btn.title = btn.getAttribute('aria-label');
+    renderList();
+  });
+
   const visninger = ['alle', 'mine'];
   el('visningRow').innerHTML = visninger.map(v =>
     `<button class="filterChip${v===activeVisning?' active':''}" data-v="${v}">${v === 'mine' ? 'Mine funn' : 'Alle funn'}</button>`
@@ -1924,27 +1941,55 @@ function oppdaterFilterIndikator(){
 // attributt-escape en fritekst-tittel (f.eks. et brukernavn med anførselstegn).
 let lukkedeGrupper = new Set();
 
+// Rad-mal (listevisning) — uendret oppførsel.
+function findRowHtml(f, visKonfidens){
+  return `
+    <button class="findRow" data-id="${f.id}">
+      ${f.bildeUrl ? `<img src="${window.ApiClient.bildeUrl(f.id)}" class="findThumb" alt="" loading="lazy">` : '<div class="findThumb"></div>'}
+      <span class="findRowText">
+        <strong>${escapeHtml(f.art?.norsk || 'Ukjent')}</strong>
+        <span class="hint">${new Date(f.tidspunkt).toLocaleDateString('no-NO')}${f.registrertAv ? ' · ' + escapeHtml(f.registrertAv) : ''}</span>
+      </span>
+      ${visKonfidens && f.kiKonfidens ? `<span class="konfidensBadge">${Math.round(f.kiKonfidens*100)} %</span>` : ''}
+    </button>`;
+}
+
+// Flis-mal (galleri-visning, tilbakemelding 2026-08-14: "visuell fokus" —
+// bildet er hovedelementet, tekst vises kun ved hover/fokus via
+// .findTileOverlay (ren CSS, se styles.css) i stedet for alltid synlig som
+// i listevisningen. Samme klikk-mål (åpner samme funndetalj-ark) uansett
+// visningsmodus — "hover ELLER klikk" fra tilbakemeldingen, ikke et eget
+// forhåndsvisnings-steg som må dobbeltklikkes forbi.
+function findTileHtml(f){
+  const bilde = f.bildeUrl
+    ? `<img src="${window.ApiClient.bildeUrl(f.id)}" class="findTileImg" alt="" loading="lazy">`
+    : `<div class="findTilePlaceholder">${escapeHtml(f.art?.norsk || 'Ukjent')}</div>`;
+  return `
+    <button class="findTile" data-id="${f.id}">
+      ${bilde}
+      <span class="findTileOverlay">
+        <strong>${escapeHtml(f.art?.norsk || 'Ukjent')}</strong>
+        <span>${new Date(f.tidspunkt).toLocaleDateString('no-NO')}${f.registrertAv ? ' · ' + escapeHtml(f.registrertAv) : ''}</span>
+      </span>
+    </button>`;
+}
+
 function renderList(){
   const seksjoner = gruppertFunn(sorterteFunn(synligeFunn()));
   const visKonfidens = erAdmin();
-  el('findList').innerHTML = seksjoner.map(seksjon => {
-    const funnHtml = seksjon.funn.map(f => `
-      <button class="findRow" data-id="${f.id}">
-        ${f.bildeUrl ? `<img src="${window.ApiClient.bildeUrl(f.id)}" class="findThumb" alt="" loading="lazy">` : '<div class="findThumb"></div>'}
-        <span class="findRowText">
-          <strong>${escapeHtml(f.art?.norsk || 'Ukjent')}</strong>
-          <span class="hint">${new Date(f.tidspunkt).toLocaleDateString('no-NO')}${f.registrertAv ? ' · ' + escapeHtml(f.registrertAv) : ''}</span>
-        </span>
-        ${visKonfidens && f.kiKonfidens ? `<span class="konfidensBadge">${Math.round(f.kiKonfidens*100)} %</span>` : ''}
-      </button>`).join('');
+  const galleri = visningsmodus === 'galleri';
 
-    if (!seksjon.tittel) return funnHtml;
+  el('findList').innerHTML = seksjoner.map(seksjon => {
+    const items = seksjon.funn.map(f => galleri ? findTileHtml(f) : findRowHtml(f, visKonfidens)).join('');
+    const innhold = galleri ? `<div class="findGrid">${items}</div>` : items;
+
+    if (!seksjon.tittel) return innhold;
 
     const apen = !lukkedeGrupper.has(seksjon.tittel);
     return `
       <details class="findGroup"${apen ? ' open' : ''} data-tittel="${encodeURIComponent(seksjon.tittel)}">
         <summary class="findGroupHeader">${escapeHtml(seksjon.tittel)} <span class="hint">(${seksjon.funn.length})</span></summary>
-        ${funnHtml}
+        ${innhold}
       </details>`;
   }).join('') || '<p class="hint">Ingen registrerte funn ennå.</p>';
 
@@ -1956,7 +2001,7 @@ function renderList(){
     });
   });
 
-  el('findList').querySelectorAll('.findRow').forEach(btn => {
+  el('findList').querySelectorAll('.findRow, .findTile').forEach(btn => {
     btn.addEventListener('click', () => {
       const f = funnCache.find(x => String(x.id) === btn.dataset.id);
       if (f) { toggleSheet('listPanel', false); if (mapCtx) panToFind(mapCtx.map, f); openDetail(f); }
