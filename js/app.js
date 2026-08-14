@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.34';
+const APP_VERSION = '0.9.35';
 const APP_BUILD_DATE = '2026-08-14';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -2097,19 +2097,32 @@ async function lastArtsbeskrivelse(funn){
 const REDIGERBARE_ARTSTYPER = ARTSTYPER;
 
 // Setter tekstverdier via .value-egenskapen i stedet for å interpolere dem inn
-// i value="..."-attributter i markup — et artsnavn kan være fri tekst (se
-// fritekst-fallbacken i speciesSearch), og escapeHtml() gjør strengen trygg
-// som HTML-INNHOLD, ikke som HTML-ATTRIBUTT (anførselstegn slipper fortsatt
-// gjennom og ville brutt ut av value="..."). .value-tilordning unngår
-// HTML-parsing av verdien helt.
+// i value="..."-attributter i markup — et artsnavn kan være fri tekst, og
+// escapeHtml() gjør strengen trygg som HTML-INNHOLD, ikke som HTML-ATTRIBUTT
+// (anførselstegn slipper fortsatt gjennom og ville brutt ut av
+// value="..."). .value-tilordning unngår HTML-parsing av verdien helt.
+//
+// Artsvalget bruker samme søk-og-velg-mønster som speciesSearch i
+// registreringsflyten (se renderRegisterPanel), IKKE to uavhengige
+// fritekstfelt slik det var før — norsk navn, latinsk navn og taxonId ble
+// tidligere redigert hver for seg, og "Lagre" sendte alltid den GAMLE
+// funn.art.taxonId uansett hva brukeren skrev i navnefeltene. Konsekvens
+// (bug rapportert 2026-08-14, se "nattfiol"-funnet 12.7.2018 opprinnelig
+// registrert som fjellhvitkurle): å endre bare det norske navnet lot det
+// latinske navnet og — verre — artsomtalen fra Wikipedia (slått opp på
+// taxonId, ikke navn, se lastArtsbeskrivelse) stå igjen fra den GAMLE
+// arten. Ved å la et treff i søket sette norsk+latinsk+artstype+taxonId
+// atomisk (pendingRedigerArt under), akkurat som setValgt() i
+// registreringsflyten, kan ikke feltene lenger komme i utakt med
+// hverandre.
 function renderRedigerFunnSkjema(funn){
   const container = el('redigerFunnForm');
   container.hidden = false;
   container.innerHTML = `
-    <label for="redigerArtNorsk">Art (norsk)</label>
-    <input id="redigerArtNorsk" type="text">
-    <label for="redigerArtLatinsk">Art (latinsk, valgfritt)</label>
-    <input id="redigerArtLatinsk" type="text">
+    <label for="redigerArtSok">Art — søk for å endre</label>
+    <input id="redigerArtSok" type="text" placeholder="f.eks. havørn" autocomplete="off">
+    <div id="redigerArtResultater" class="speciesResults"></div>
+    <div id="redigerArtValgt" class="selectedSpecies"></div>
     <label for="redigerArtstype">Artstype</label>
     <select id="redigerArtstype">
       ${REDIGERBARE_ARTSTYPER.map(t => `<option value="${t}">${t}</option>`).join('')}
@@ -2127,12 +2140,68 @@ function renderRedigerFunnSkjema(funn){
     </div>
     <p id="redigerNote" class="note"></p>`;
 
-  el('redigerArtNorsk').value = funn.art?.norsk || '';
-  el('redigerArtLatinsk').value = funn.art?.latinsk || '';
+  // Starter som funnets nåværende art — uendret med mindre brukeren velger
+  // et nytt treff i søket under. Holdes UTENFOR redigerArtSok sin rå
+  // tekstverdi med hensikt (samme som pendingArt/setValgt i
+  // renderRegisterPanel): å skrive i søkefeltet uten å trykke på et
+  // resultat skal ikke stille-endre hvilken art som lagres.
+  let pendingRedigerArt = { norsk: funn.art?.norsk || '', latinsk: funn.art?.latinsk || '', artstype: funn.artstype, taxonId: funn.art?.taxonId };
+  el('redigerArtSok').value = pendingRedigerArt.norsk;
   el('redigerArtstype').value = funn.artstype;
   el('redigerLat').value = funn.lat;
   el('redigerLon').value = funn.lon;
   el('redigerTidspunkt').value = toDatetimeLocalValue(new Date(funn.tidspunkt));
+
+  function setValgt(art){
+    pendingRedigerArt = art;
+    el('redigerArtstype').value = art.artstype;
+    renderValgtVisning();
+  }
+  function renderValgtVisning(){
+    el('redigerArtValgt').innerHTML = pendingRedigerArt.norsk
+      ? `Valgt: <strong>${escapeHtml(pendingRedigerArt.norsk)}</strong> <em>${escapeHtml(pendingRedigerArt.latinsk||'')}</em>`
+      : '';
+  }
+  renderValgtVisning();
+
+  function renderRedigerArtResultater(lokale, eksterne){
+    const alle = [...lokale, ...eksterne];
+    el('redigerArtResultater').innerHTML =
+      lokale.map((s, i) => speciesResultButtonHtml(s, i)).join('') +
+      (eksterne.length ? '<p class="hint speciesResultsHint">Flere treff</p>' : '') +
+      eksterne.map((s, i) => speciesResultButtonHtml(s, lokale.length + i)).join('');
+
+    el('redigerArtResultater').querySelectorAll('.speciesResult').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const s = alle[Number(btn.dataset.i)];
+        setValgt({ norsk: s.norsk, latinsk: s.latinsk, artstype: s.artstype, taxonId: s.taxonId });
+        el('redigerArtResultater').innerHTML = '';
+        el('redigerArtSok').value = s.norsk;
+      });
+    });
+  }
+
+  let redigerSokTimer = null;
+  el('redigerArtSok').addEventListener('input', (ev) => {
+    const rawTerm = ev.target.value.trim();
+    const term = rawTerm.toLowerCase();
+    const lokaleTreff = term.length < 2 ? [] : speciesCache.filter(s =>
+      s.norsk.toLowerCase().includes(term) || s.latinsk.toLowerCase().includes(term)
+    ).slice(0, 6);
+    renderRedigerArtResultater(lokaleTreff, []);
+
+    clearTimeout(redigerSokTimer);
+    if (term.length < 2) return;
+    redigerSokTimer = setTimeout(async () => {
+      const eksterneTreff = await window.ApiClient.sokArter(rawTerm);
+      const lokaleNavn = new Set(lokaleTreff.map(s => s.norsk.toLowerCase()));
+      const nyeTreff = eksterneTreff.filter(s => !lokaleNavn.has(s.norsk.toLowerCase()));
+      // Ikke overskriv hvis brukeren har rukket å endre søket videre.
+      if (el('redigerArtSok').value.trim().toLowerCase() === term) {
+        renderRedigerArtResultater(lokaleTreff, nyeTreff);
+      }
+    }, 300);
+  });
 
   el('avbrytRedigertBtn').addEventListener('click', () => { container.hidden = true; container.innerHTML = ''; });
   el('redigerVelgPosisjonBtn').addEventListener('click', () => {
@@ -2157,16 +2226,25 @@ function renderRedigerFunnSkjema(funn){
     });
   });
   el('lagreRedigertBtn').addEventListener('click', async () => {
-    const artNorsk = el('redigerArtNorsk').value.trim();
-    if (!artNorsk) { el('redigerNote').textContent = 'Art (norsk navn) mangler.'; return; }
+    if (!pendingRedigerArt.norsk) { el('redigerNote').textContent = 'Art (norsk navn) mangler.'; return; }
+    // Har brukeren skrevet videre i søkefeltet uten å trykke på et
+    // resultat? pendingRedigerArt henger da fortsatt igjen på forrige valg
+    // — akkurat den utakten som forårsaket buggen dette skjemaet ble
+    // bygget om for å unngå (se kommentaren over renderRedigerFunnSkjema).
+    // Bedre å stoppe og be brukeren fullføre valget enn å lagre en art som
+    // ikke stemmer med det som står i feltet.
+    if (el('redigerArtSok').value.trim().toLowerCase() !== pendingRedigerArt.norsk.toLowerCase()) {
+      el('redigerNote').textContent = 'Velg en art fra søkeresultatene (eller avbryt endringen i søkefeltet) før du lagrer.';
+      return;
+    }
     const lat = parseFloat(el('redigerLat').value);
     const lon = parseFloat(el('redigerLon').value);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) { el('redigerNote').textContent = 'Ugyldig posisjon.'; return; }
 
     const felter = {
-      art_norsk: artNorsk,
-      art_latinsk: el('redigerArtLatinsk').value.trim(),
-      art_taxon_id: funn.art?.taxonId,
+      art_norsk: pendingRedigerArt.norsk,
+      art_latinsk: pendingRedigerArt.latinsk || '',
+      art_taxon_id: pendingRedigerArt.taxonId,
       artstype: el('redigerArtstype').value,
       lat, lon,
       tidspunkt: new Date(el('redigerTidspunkt').value).toISOString()

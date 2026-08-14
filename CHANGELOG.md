@@ -1,5 +1,33 @@
 # Endringslogg
 
+## 0.9.35 — Redigering av funn: artssøk erstatter fritekstfelt
+Bug rapportert 2026-08-14 (nattfiol-funnet fra 12.7.2018, opprinnelig
+registrert som fjellhvitkurle): å redigere et funns art via de to
+uavhengige fritekstfeltene "Art (norsk)" og "Art (latinsk)" lot alltid
+`funn.art.taxonId` stå uendret på den GAMLE arten, uansett hva som ble
+skrevet i navnefeltene — "Lagre" sendte alltid `funn.art?.taxonId` fra
+funnet slik det var FØR redigeringen. Konsekvens: et funn kunne ende opp
+med det norske navnet fra én art, det latinske navnet fra en annen (hvis
+brukeren glemte å oppdatere det feltet også), og — verre —
+artsomtalen fra Wikipedia (slått opp på taxonId, ikke navn, se
+`lastArtsbeskrivelse` i `js/app.js`) fra en helt tredje art.
+
+`renderRedigerFunnSkjema` (`js/app.js`) bruker nå samme søk-og-velg-mønster
+som allerede fantes i registreringsflyten (`speciesSearch`/`setValgt` i
+`renderRegisterPanel`) og admin sitt artssøk (`wireArtSok`): et treff i
+søket (lokalt kuratert utvalg + live Artsdatabanken-søk via
+`ApiClient.sokArter`) setter norsk navn, latinsk navn, artstype og taxonId
+atomisk, så de tre feltene ikke lenger kan komme i utakt. Å skrive i
+søkefeltet uten å velge et treff endrer ikke lenger arten som lagres —
+"Lagre" blokkeres med en beskjed om å velge fra søkeresultatene i stedet,
+samme beskyttelse som registreringsflyten alltid har hatt.
+
+Verifisert lokalt end-to-end (`wrangler dev` + lokal D1): redigerte et
+testfunn fra "Fjellhvitkurle" til "nattfiol" via søket — `art_norsk`,
+`art_latinsk` og `art_taxon_id` ble alle oppdatert sammen i D1, og
+funndetaljene viste umiddelbart riktig Wikipedia-omtale for nattfiol i
+stedet for den gamle fjellhvitkurle-omtalen.
+
 ## 0.9.34 — Merke-ikonstørrelse, Øyhopper II-terskel, galleri-visning
 Fire punkter fra produkttilbakemelding 2026-08-14:
 
