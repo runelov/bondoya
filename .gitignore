@@ -1,3 +1,8 @@
 node_modules/
 .wrangler/
 .dev.vars
+
+# Lokale benchmark-artefakter (feltbilder + KI-svar) — se
+# worker/api/scripts/eksporter-benchmark-sett.mjs. Regenereres fra D1/R2 og
+# eksterne API-kall, hører ikke hjemme versjonskontrollert i et offentlig repo.
+worker/api/scripts/benchmark/

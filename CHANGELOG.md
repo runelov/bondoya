@@ -1,5 +1,41 @@
 # Endringslogg
 
+## 0.9.36 — KI-proxy: hevet max_tokens, kandidatliste-utvidelse forkastet
+Del av en bredere gjennomgang av artsgjenkjenningens treffsikkerhet
+(2026-08-21, startet fra brukertilbakemelding om at Claude vision opplevdes
+upresist sammenlignet med Artsdatabankens "Artsorakel"). Et offline
+benchmark ble bygget mot 81 funn med reelt artssøk-forankret taxonId
+(`worker/api/scripts/`, ikke committet — se `.gitignore`-oppføringen for
+`scripts/benchmark/`), som ga to konkrete resultater:
+
+**Fikset her:** `max_tokens: 512` i `worker/ki-proxy/src/index.js` var for
+knapt så snart Claude gir 2-3 kandidater med fyldig `saertrekk`-tekst —
+JSON-svaret kappes midt i og blir uleselig for `parseModelJson()`, som i
+produksjon vises til brukeren som en uspesifisert "KI-gjenkjenning
+feilet". Reprodusert direkte mot den faktiske produksjonsprompten under
+benchmarket (ikke bare i en modifisert testvariant) — trolig en reell,
+stille feilkilde i produksjon også, ikke bare i test. Hevet til 1024.
+
+**Forkastet, IKKE implementert:** hypotesen om at en bredere, artstype-
+balansert stedsforankret kandidatliste (fremfor dagens 17 kuraterte arter i
+`data/species.json`, som mangler planter/sopp/insekt helt — 61 % av alle
+funn er "plante") ville løfte treffsikkerheten. Testet i tre iterasjoner
+(rå observasjonstall → kvalitativ "sjelden/vanlig"-framing + eksplisitt
+elg/rådyr/hjort-skille → en fjerde kontrollvariant med TOM kandidatliste)
+mot samme 81-bilders gullsett. Konklusjon, tydeligst på et rådyr/hjort-
+forvekslingscase (4/4 rådyr-bilder feilklassifisert som "hjort" så snart
+hjort var en navngitt kandidat i det hele tatt, uavhengig av om rådyr
+*også* var med i lista): å navngi en lokalt plausibel alternativ art kan
+overstyre en ellers korrekt visuell vurdering, uavhengig av ordlyd eller om
+riktig art også tilbys. Uten noen kandidatliste i det hele tatt traff
+modellen 4/4 rådyr-bilder korrekt — likt dagens 17-artsliste (som ikke
+nevner verken rådyr eller hjort) — mens den utvidede 64-artslisten traff
+1/6 pattedyr totalt. Full metodikk, tall og eksempler i det delte
+analysenotatet "Artsgjenkjenning: veivalg". Dagens 17-arts kandidatliste
+beholdes uendret inntil et bedre fundert alternativ (f.eks. et
+sammenligningsbenchmark mot Naturalis' "Nature Identification API", som
+også drøftes i samme notat) er vurdert.
+
 ## 0.9.35 — Redigering av funn: artssøk erstatter fritekstfelt
 Bug rapportert 2026-08-14 (nattfiol-funnet fra 12.7.2018, opprinnelig
 registrert som fjellhvitkurle): å redigere et funns art via de to

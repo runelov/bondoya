@@ -73,9 +73,18 @@ export default {
       const mediaType = bildeFil.type && bildeFil.type.startsWith('image/') ? bildeFil.type : 'image/jpeg';
 
       const prompt = buildPrompt(kandidater);
+      // max_tokens hevet 512 → 1024 (2026-08-21, se benchmark-analysen delt
+      // samme dato): et offline-benchmark av denne nøyaktige prompten viste
+      // at 512 var for knapt så snart modellen gir 2-3 kandidater med fyldig
+      // "saertrekk"-tekst — svaret kappes midt i JSON-en og blir uleselig
+      // for parseModelJson(), som i produksjon vises til brukeren som "KI-
+      // gjenkjenning feilet" uten noen tydelig årsak. Ikke observert i noe
+      // konkret bruker-rapportert avvik før nå, men bekreftet reprodusert
+      // direkte mot denne prompten under benchmarket — sannsynlig stille
+      // feilkilde i produksjon også, ikke bare i test.
       const anthropicBody = JSON.stringify({
         model: env.ANTHROPIC_MODEL || 'claude-sonnet-5',
-        max_tokens: 512,
+        max_tokens: 1024,
         messages: [{
           role: 'user',
           content: [
