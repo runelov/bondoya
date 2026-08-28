@@ -1,5 +1,29 @@
 # Endringslogg
 
+## 0.9.44 — PWA-installasjonstilbud ("legg til på hjemskjermen")
+Implementerte planen godkjent 2026-08-28 (`konsept.md` "Backlog —
+PWA-onboarding"): portert FungiFinders `wireA2HS()`-mønster hit — samme
+kilde `wireVersionUpdateCheck()` (0.9.38) allerede er hentet fra — men
+restylet til Bondøyas lyse glass/blur-språk (`.a2hsBanner`,
+`css/styles.css`) i stedet for FungiFinders mørke ink-pille. Android viser
+en dedikert "Installer"-knapp koblet til `beforeinstallprompt` (ikke
+nettleserens standard-UI); iOS har intet programmatisk install-API og får
+en manuell anvisning ("Del → Legg til på Hjemskjerm"). Egen komponent i
+`index.html`, plassert 70px over `updateBanner` slik at begge kan vises
+samtidig uten overlapp — ulike formål (installasjon vs. oppdatering), deler
+ikke logikk.
+
+Vises bevisst kun for **innloggede** brukere, ikke besøkende (det avklarte
+åpne spørsmålet i planen) — nytten (rask tilgang, og stabil innlogging på
+iOS der magic-link-e-post og PWA-cookien lever i atskilte lagringsrom)
+gjelder først når man faktisk har en konto. `wireA2HS()` avgjør plattform
+og fanger `beforeinstallprompt` allerede fra oppstart uansett
+innloggingsstatus (eventet lar seg bare fange én gang), men selve
+visningen styres av `oppdaterA2HSVisning()`, kalt fra `sjekkSesjon()` —
+dermed vises tilbudet også hvis innlogging skjer midt i en økt uten
+omlasting (f.eks. invitasjons-registrering), ikke bare ved en fersk
+sidelasting.
+
 ## 0.9.43 — Skjul status-pillen når det ikke er noe å si, fjern grå kant på kart-kontroller
 To oppfølgingspunkter fra design-reviewen i 0.9.42.
 

@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.43';
+const APP_VERSION = '0.9.44';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireFremdriftPanel();
   wireSheetDismiss();
   wireVersionUpdateCheck();
+  wireA2HS();
 
   await haandterInvitasjonFraUrl();
 
@@ -139,6 +140,7 @@ async function sjekkSesjon(){
     brukerCache = null;
   }
   renderAccountPanel();
+  oppdaterA2HSVisning(); // no-op før wireA2HS() er kjørt — se den funksjonens kommentar
   return brukerCache;
 }
 
@@ -1389,6 +1391,102 @@ function wireVersionUpdateCheck(){
     else stopPolling();
   });
   if (document.visibilityState === 'visible') startPolling();
+}
+
+// ---------- "legg til på hjemskjermen" (PWA-installasjon) ----------
+// Portert fra FungiFinders wireA2HS() (js/app.js der), restylet til
+// Bondøyas lyse glass/blur-språk i stedet for FungiFinders mørke ink-pille
+// (se .a2hsBanner i css/styles.css) — samme kilde som
+// wireVersionUpdateCheck() over ble hentet fra likeledes. Egen komponent,
+// atskilt fra updateBanner (installasjon vs. oppdatering, se index.html).
+// Vises BEVISST kun for innloggede brukere, ikke besøkende — nytten
+// (rask tilgang, og stabil innlogging på iOS der magic-link-e-post og
+// PWA-cookien lever i atskilte lagringsrom, se
+// verifiserKode()-begrunnelsen i worker/api/src/routes/auth.js) gjelder
+// først når man faktisk har en konto å holde innlogget. Se konsept.md
+// "Backlog — PWA-onboarding" (godkjent 2026-08-28) for hele resonnementet.
+let a2hsErIOS = false;
+let a2hsErAndroid = false;
+let a2hsDeferredPrompt = null;
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function a2hsKanVises(){
+  return !!brukerCache && !isStandalone() && !localStorage.getItem('bondoya-a2hs-lukket');
+}
+
+// Kalt både fra wireA2HS() selv og fra sjekkSesjon() (innlogging kan skje
+// midt i en økt uten omlasting, f.eks. invitasjons-registrering — se
+// wireInviterPanel) — banner.dataset.a2hsKlar er bare satt etter at
+// wireA2HS() har avgjort at plattformen i det hele tatt har noe å tilby,
+// så et tidlig kall herfra (f.eks. fra det aller første sjekkSesjon()-
+// kallet, før wireA2HS() i det hele tatt er kjørt) er trygt en no-op.
+function oppdaterA2HSVisning(){
+  const banner = el('a2hsBanner');
+  if (!banner || !banner.dataset.a2hsKlar) return;
+  if (!a2hsKanVises()) { banner.hidden = true; return; }
+  if (a2hsErAndroid && !a2hsDeferredPrompt) return; // vent på event/fallback-timer under
+  banner.hidden = false;
+}
+
+function wireA2HS(){
+  const banner = el('a2hsBanner');
+  if (!banner) return;
+  if (isStandalone()) return; // allerede installert — ingenting å tilby
+
+  const textEl = el('a2hsText');
+  const actionBtn = el('a2hsAction');
+  const ua = navigator.userAgent || '';
+  a2hsErIOS = /iphone|ipad|ipod/i.test(ua);
+  a2hsErAndroid = /android/i.test(ua);
+  if (!a2hsErIOS && !a2hsErAndroid) return; // desktop e.l. — ingen hjemskjerm å legge til
+
+  banner.dataset.a2hsKlar = '1';
+  el('a2hsClose').addEventListener('click', () => {
+    localStorage.setItem('bondoya-a2hs-lukket', '1');
+    banner.hidden = true;
+  });
+
+  if (a2hsErIOS) {
+    // iOS har intet programmatisk install-API (beforeinstallprompt finnes
+    // ikke der) — "Legg til på Hjemskjerm" ligger kun i Safari sin egen
+    // delemeny, så her kan vi bare vise anvisningen, ikke trigge den.
+    textEl.innerHTML = 'Rask tilgang som en app — og du slipper å logge inn i nettleseren på nytt hver gang. Trykk <b>Del</b>-ikonet nederst i Safari, og velg <b>«Legg til på Hjemskjerm»</b>.';
+    oppdaterA2HSVisning();
+    return;
+  }
+
+  // Android
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    a2hsDeferredPrompt = e;
+    actionBtn.hidden = false;
+    oppdaterA2HSVisning();
+  });
+  actionBtn.addEventListener('click', async () => {
+    if (!a2hsDeferredPrompt) return;
+    actionBtn.disabled = true;
+    a2hsDeferredPrompt.prompt();
+    const valg = await a2hsDeferredPrompt.userChoice.catch(() => null);
+    a2hsDeferredPrompt = null;
+    if (valg && valg.outcome === 'accepted') {
+      localStorage.setItem('bondoya-a2hs-lukket', '1');
+      banner.hidden = true;
+    } else {
+      actionBtn.disabled = false;
+    }
+  });
+  // Fallback hvis beforeinstallprompt aldri fyres (f.eks. nylig avvist av
+  // nettleseren selv) — vis statisk anvisning i stedet for at banneret bare
+  // forblir usynlig og brukeren aldri får tilbudet.
+  setTimeout(() => {
+    if (!a2hsDeferredPrompt) {
+      textEl.textContent = 'Rask tilgang som en app — og du slipper å logge inn i nettleseren på nytt hver gang. Åpne meny-knappen (⋮) i nettleseren og velg «Legg til på startskjerm» / «Installer app».';
+      oppdaterA2HSVisning();
+    }
+  }, 2500);
 }
 
 // ---------- artsforslag (stedsforankret plausibilitet) ----------

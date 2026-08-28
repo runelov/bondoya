@@ -762,6 +762,46 @@ body{
 }
 .updateBannerDismiss:hover{ color: #fff; }
 
+/* ---------- "legg til på hjemskjermen"-tilbud ---------- */
+/* Egen komponent, atskilt fra .updateBanner over (installasjon vs.
+   oppdatering — se index.html/wireA2HS() i app.js). Portert fra
+   FungiFinders wireA2HS()-mønster, men restylet til Bondøyas lyse
+   glass/blur-språk (samme oppskrift som .iconBtn/.pill over) i stedet for
+   FungiFinders mørke ink-pille — se konsept.md "Backlog — PWA-onboarding".
+   Plassert 70px over .updateBanner slik at begge kan vises samtidig uten
+   å overlappe, i det sjeldne tilfellet begge trigges likt (ikke installert
+   OG en nyere versjon samtidig tilgjengelig). */
+.a2hsBanner{
+  position: fixed;
+  bottom: calc(260px + var(--safe-bottom));
+  left: 50%; transform: translateX(-50%);
+  z-index: 1000;
+  display: flex; align-items: center; flex-wrap: wrap; justify-content: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--ink);
+  padding: 10px 10px 10px 16px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+}
+/* Samme [hidden]-spesifisitetsfelle som .updateBanner over — se den
+   kommentaren for hvorfor denne regelen er nødvendig. */
+.a2hsBanner[hidden]{ display: none; }
+.a2hsBannerActions{ display: flex; align-items: center; gap: 6px; }
+.a2hsBannerBtn{
+  background: var(--accent); color: #fff; border: none; border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.a2hsBannerDismiss{
+  background: none; border: none; color: var(--ink-soft);
+  font-size: 16px; cursor: pointer; padding: 4px 6px; line-height: 1;
+}
+.a2hsBannerDismiss:hover{ color: var(--ink); }
+
 @media (min-width: 760px){
   .sheet{ max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: var(--radius-lg); bottom: 24px; }
 }
