@@ -1,7 +1,7 @@
 import { json } from '../lib/json.js';
 import { corsHeaders } from '../lib/cors.js';
 import { requireAdmin } from '../lib/session.js';
-import { erFunnSynligForPublic, settFunnSynligForPublic } from '../lib/innstillinger.js';
+import { erFunnSynligForPublic, settFunnSynligForPublic, erLeaderboardAktivert, settLeaderboardAktivert } from '../lib/innstillinger.js';
 import { parseSideRad, validerSideFelter } from '../lib/sider.js';
 import { randomToken, sha256Hex } from '../lib/crypto.js';
 import { validerEpost } from '../lib/invitasjoner.js';
@@ -82,7 +82,11 @@ export async function hentInnstillinger({ request, env }) {
   const admin = await requireAdmin(request, env);
   if (!admin) return json({ error: 'Krever admin-tilgang.' }, 403, cors);
 
-  return json({ funnSynligForPublic: await erFunnSynligForPublic(env) }, 200, cors);
+  return json(
+    { funnSynligForPublic: await erFunnSynligForPublic(env), leaderboardAktivert: await erLeaderboardAktivert(env) },
+    200,
+    cors
+  );
 }
 
 export async function oppdaterInnstillinger({ request, env }) {
@@ -96,12 +100,25 @@ export async function oppdaterInnstillinger({ request, env }) {
   } catch {
     return json({ error: 'Ugyldig forespørsel.' }, 400, cors);
   }
-  if (typeof body.funnSynligForPublic !== 'boolean') {
+
+  // Begge feltene er valgfrie i samme PATCH — klienten sender i praksis
+  // alltid begge (se settAdminInnstillinger i js/api-client.js), men denne
+  // ruten skal ikke kreve det, samme fleksibilitet som andre PATCH-ruter.
+  if (body.funnSynligForPublic !== undefined && typeof body.funnSynligForPublic !== 'boolean') {
     return json({ error: 'Ugyldig verdi for funnSynligForPublic.' }, 400, cors);
   }
+  if (body.leaderboardAktivert !== undefined && typeof body.leaderboardAktivert !== 'boolean') {
+    return json({ error: 'Ugyldig verdi for leaderboardAktivert.' }, 400, cors);
+  }
 
-  await settFunnSynligForPublic(env, body.funnSynligForPublic);
-  return json({ funnSynligForPublic: body.funnSynligForPublic }, 200, cors);
+  if (body.funnSynligForPublic !== undefined) await settFunnSynligForPublic(env, body.funnSynligForPublic);
+  if (body.leaderboardAktivert !== undefined) await settLeaderboardAktivert(env, body.leaderboardAktivert);
+
+  return json(
+    { funnSynligForPublic: await erFunnSynligForPublic(env), leaderboardAktivert: await erLeaderboardAktivert(env) },
+    200,
+    cors
+  );
 }
 
 export async function listAdminSider({ request, env }) {

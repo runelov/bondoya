@@ -1,5 +1,33 @@
 # Endringslogg
 
+## 0.9.39 — Fase D: Leaderboard (admin-styrt av/på)
+Se konsept.md "Gamification: personlig fremdrift, poeng og badges" →
+"Fase D — Leaderboard" for full spesifikasjon og begrunnelse. Fase A
+(personlig fremdrift) og B (admin-oversikt) var allerede i produksjon —
+denne fasen eksponerer en beskåret, riktig portvoktet versjon av samme
+`beregnFremdrift()`-beregning til vanlige innloggede brukere, gitt at
+admin har skrudd funksjonen på.
+
+**Ingen ny D1-tabell/migrasjon** — gjenbruker `innstillinger` (migrations/
+0005) med en ny nøkkel `leaderboard_aktivert`, nøyaktig samme mønster som
+`funn_synlig_for_public`. Fail-closed (AV) til admin eksplisitt skrur den
+på i Admin → Innstillinger.
+
+Nytt endepunkt `GET /leaderboard` (`worker/api/src/routes/meg.js`):
+krever innlogging (ikke admin), 403 hvis funksjonen er av. Returnerer
+`{ kortnavn, poengsum, antallArter, merker }` per aktiv bruker, sortert
+synkende på poengsum — bevisst SMALERE felt-sett enn admin-oversikten:
+ingen brukerId, ingen status, ingen deaktiverte brukere, og kun OPPNÅDDE
+merker (ikon+navn, ikke beskrivelse/progresjon — merkenes beskrivelse kan
+navngi hvilken rødlistet art brukeren fant). `GET /meg` utvidet med et
+lett `leaderboardAktivert`-flagg (uansett innloggingsstatus) slik
+klienten kan vise/skjule inngangen uten et eget kall.
+
+Klient: ny seksjon nederst i "Min fremdrift"-panelet (ikke egen fane),
+med egen rad fremhevet for innlogget bruker. Verifisert lokalt end-to-end
+mot ekte `wrangler dev` (av→på→av, 403-sperre, partial-PATCH som ikke
+rører den andre innstillingen) og visuelt i nettleser.
+
 ## 0.9.38 — Ny-versjon-varsel for installert PWA
 Portert fra FungiFinder (samme app-familie, samme problem): en installert
 (standalone) PWA merker aldri en ny utrulling av seg selv bare ved å

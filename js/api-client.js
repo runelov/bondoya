@@ -13,6 +13,16 @@ async function kall(sti, opts) {
   return res;
 }
 
+// Fase D (leaderboard) — /meg sender alltid med leaderboardAktivert
+// (uansett innloggingsstatus, se worker/api/src/routes/meg.js), men meg()
+// under returnerer fortsatt null når ikke innlogget (uendret kontrakt —
+// resten av appen sjekker `if (brukerCache)` mange steder). Flagget
+// mellomlagres derfor her og leses av erLeaderboardAktivert() under, i
+// stedet for å utvide meg() sin returverdi og måtte endre alle disse
+// sjekkene.
+let sisteLeaderboardAktivert = false;
+function erLeaderboardAktivert() { return sisteLeaderboardAktivert; }
+
 // Returnerer innlogget bruker ({epost, kortnavn, rolle}), eller null hvis
 // ikke innlogget. /meg svarer alltid 200 (aldri 401) for "ikke innlogget" —
 // det er en normal, forventet tilstand for en statussjekk-rute (f.eks. ved
@@ -24,6 +34,7 @@ async function meg() {
   const res = await kall('/meg');
   if (!res.ok) return null;
   const data = await res.json();
+  sisteLeaderboardAktivert = !!data.leaderboardAktivert;
   return data.loggedIn ? { epost: data.epost, kortnavn: data.kortnavn, rolle: data.rolle } : null;
 }
 
@@ -290,6 +301,16 @@ async function hentFremdrift() {
   return res.json();
 }
 
+// Fase D — leaderboard, se worker/api/src/routes/meg.js sin
+// hentLeaderboard(). 403 (ikke tom liste) hvis admin har skrudd funksjonen
+// av — kastes videre som feil, samme mønster som resten av klienten.
+async function hentLeaderboard() {
+  const res = await kall('/leaderboard');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Kunne ikke hente leaderboard (${res.status}).`);
+  return data;
+}
+
 // Sesjonsbeskyttet KI-gjenkjenning — se worker/api/src/routes/ki.js. Denne
 // Workeren legger på den delte hemmeligheten mot worker/ki-proxy server-side,
 // så klienten trenger aldri å kjenne til noen delt hemmelighet selv.
@@ -407,6 +428,8 @@ window.ApiClient = {
   hentAdminDashboard,
   hentAdminFremdrift,
   hentFremdrift,
+  hentLeaderboard,
+  erLeaderboardAktivert,
   sokArter,
   hentArtsbeskrivelse,
   hentArtMiniatyrbilde,
