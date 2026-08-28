@@ -1,5 +1,18 @@
 #!/usr/bin/env node
-// Kjører gullsettet (81 funn, samme sett som test-naturalis-nia.mjs) mot det
+// ⚠️ AVVIKLET, IKKE KJØR PÅ NYTT (2026-08-27) ⚠️
+// Artsdatabanken har utstedt ekte tokens til Bondøya, ett for
+// ai.test.artsdatabanken.no og ett for ai.artsdatabanken.no (produksjon),
+// med en eksplisitt regel: all testing/analyse/vurdering skal gå mot
+// TESTENDEPUNKTET, kun selve appen skal gå mot produksjon. Bruk
+// test-artsorakel.mjs i stedet — dette scriptet her kalte
+// PRODUKSJONSendepunktet med et token skrapet fra klientkoden, noe som
+// ikke lenger er riktig fremgangsmåte nå som vi har en avtale. Filen
+// beholdes kun som historisk referanse for resultatene den allerede har
+// samlet inn (benchmark/resultater-artsorakel-prod.json).
+//
+// --- opprinnelig toppkommentar under, for kontekst ---
+//
+// Kjørte gullsettet (81 funn, samme sett som test-naturalis-nia.mjs) mot det
 // EKTE Artsorakel-endepunktet (ai.artsdatabanken.no), for å sammenligne
 // direkte med produksjonen brukere faktisk møter — ikke bare Naturalis sitt
 // offentlige NIA-testendepunkt. Se "Artsgjenkjenning: veivalg"-notatet
