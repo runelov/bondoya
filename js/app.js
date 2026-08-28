@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.40';
+const APP_VERSION = '0.9.41';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -529,6 +529,7 @@ async function renderAdminFremdrift(){
 const MERKE_IKONER = {
   oppdageren: '🔭',
   rodlistejeger: '⚠️',
+  sjeldenhetsjeger: '💎',
   artssamler_1: '🥉',
   artssamler_2: '🥈',
   artssamler_3: '🥇',
@@ -654,11 +655,17 @@ async function renderFremdrift(){
   }
   fremdriftCache = f;
 
+  // e.kildeDisclosure (kun satt på 'sjeldenhet'-elementet, se
+  // lib/fremdrift.js) vises som en fast, alltid synlig hint-linje rett
+  // under raden — IKKE bak et ⓘ-ikon/tooltip, se konsept.md sin vurdering
+  // for hvorfor: brukeren skal se forbeholdet FØR de undrer seg over
+  // hvorfor et funn de trodde var sjeldent ga 0p.
   const scoreRader = f.score.elementer.map(e => `
     <div class="scoreRow">
       <span class="lbl">${escapeHtml(e.etikett)}<span class="detail">${escapeHtml(e.detalj)}</span></span>
       <span class="val">${e.poeng} p</span>
-    </div>`).join('') + `
+    </div>
+    ${e.kildeDisclosure ? `<p class="hint" style="padding:0 16px 10px">${escapeHtml(e.kildeDisclosure)}</p>` : ''}`).join('') + `
     <div class="scoreRow total">
       <span class="lbl">Totalt</span>
       <span class="val">${f.score.totalt} p</span>

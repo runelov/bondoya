@@ -5,17 +5,17 @@
 // CACHE_NAME følger APP_VERSION (js/app.js) fra og med 0.9.26 — bump denne
 // sammen med APP_VERSION og query-strengene under ved hver deploy, så en
 // ny versjon alltid får en ren cache i stedet for å arve forrige sin.
-const CACHE_NAME = 'bondoya-shell-v0.9.40';
+const CACHE_NAME = 'bondoya-shell-v0.9.41';
 const SHELL_FILES = [
   './',
   './index.html',
   './manifest.json',
-  './css/styles.css?v=0.9.40',
-  './js/app.js?v=0.9.40',
-  './js/api-client.js?v=0.9.40',
-  './js/offline-queue.js?v=0.9.40',
-  './js/ki-client.js?v=0.9.40',
-  './js/map.js?v=0.9.40',
+  './css/styles.css?v=0.9.41',
+  './js/app.js?v=0.9.41',
+  './js/api-client.js?v=0.9.41',
+  './js/offline-queue.js?v=0.9.41',
+  './js/ki-client.js?v=0.9.41',
+  './js/map.js?v=0.9.41',
   './data/species.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
