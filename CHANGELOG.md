@@ -1,5 +1,31 @@
 # Endringslogg
 
+## 0.9.38 — Ny-versjon-varsel for installert PWA
+Portert fra FungiFinder (samme app-familie, samme problem): en installert
+(standalone) PWA merker aldri en ny utrulling av seg selv bare ved å
+"åpnes igjen" — spesielt på iOS, der det ofte bare gjenopptar en allerede
+kjørende side i minnet. `sw.js` sin nettverk-først-strategi løser dette
+for en fersk sidelasting, men ikke for en side som allerede står åpen.
+
+`wireVersionUpdateCheck()` (`js/app.js`) poller `index.html` med
+`cache: 'no-store'` hvert 5. minutt mens appen er synlig (pluss ved
+`visibilitychange` til synlig), sammenligner embedded `js/app.js?v=`-
+versjonen mot kjørende `APP_VERSION` med ekte semver-større-enn
+(`versjonErNyere()`, ikke bare ulikhet — se FungiFinder sin egen rettelse
+av akkurat den bugen), og viser en dismissbar banner med manuell
+reload-knapp. Reload er ALDRI automatisk.
+
+Merk (bekreftet mot bondoya.no, samme som FungiFinder-funnet): GitHub
+Pages ligger bak Fastly, som cacher `/index.html` på tvers av ulike
+query-strenger — `no-store` omgår kun nettleserens egen cache, ikke
+CDN-laget. En fersk utrulling kan derfor ta opptil ~10 min
+(`cache-control: max-age=600`) før varselet kan dukke opp i det hele tatt.
+
+Fjernet også "Usikker selv? Prøv Artsorakel"-lenken i registreringsflyten
+(`js/app.js`, viste seg når KI var usikker/fant ingenting) — overflødig nå
+som Artsorakel allerede er en del av selve gjenkjenningen (0.9.37), ikke
+lenger noe brukeren manuelt trenger å oppsøke på en annen nettside.
+
 ## 0.9.37 — KI-proxy: hybrid Artsorakel + Claude
 Oppfølging av 0.9.36-benchmarket: fullt 81-funns gullsett kjørt mot
 produksjons-Artsorakelet (`ai.artsdatabanken.no`, senere re-verifisert mot

@@ -609,6 +609,44 @@ body{
   box-shadow: 0 8px 24px rgba(0,0,0,0.28);
 }
 
+/* ---------- ny-versjon-varsel ---------- */
+/* Samme fargespråk som .toast (ikke en ny farge å holde styr på), plassert
+   godt over den (190px mot 120px) slik at de to aldri kan overlappe hvis
+   begge skulle vises samtidig. Se wireVersionUpdateCheck() i app.js. */
+
+.updateBanner{
+  position: fixed;
+  bottom: calc(190px + var(--safe-bottom));
+  left: 50%; transform: translateX(-50%);
+  z-index: 1000;
+  display: flex; align-items: center; flex-wrap: wrap; justify-content: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  background: var(--ink); color: #fff;
+  padding: 10px 10px 10px 16px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+}
+/* [hidden] sin innebygde display:none i nettleserens eget stilark har SAMME
+   spesifisitet (0,1,0) som .updateBanner over — uten denne regelen ville
+   display:flex alltid vinne i praksis siden forfatter-arket lastes etter
+   nettleserens eget, og [hidden]-attributtet ville satt/fjernet korrekt av
+   JS men ha null visuell effekt (nøyaktig denne buggen ble funnet og rettet
+   i FungiFinder sin tilsvarende sp-update-banner 2026-08-21 — samme fiks
+   forebygget her fra start). */
+.updateBanner[hidden]{ display: none; }
+.updateBannerActions{ display: flex; align-items: center; gap: 6px; }
+.updateBannerBtn{
+  background: #fff; color: var(--ink); border: none; border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.updateBannerDismiss{
+  background: none; border: none; color: rgba(255,255,255,0.75);
+  font-size: 16px; cursor: pointer; padding: 4px 6px; line-height: 1;
+}
+.updateBannerDismiss:hover{ color: #fff; }
+
 @media (min-width: 760px){
   .sheet{ max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: var(--radius-lg); bottom: 24px; }
 }
