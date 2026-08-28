@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.41';
+const APP_VERSION = '0.9.42';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -254,7 +254,10 @@ function renderAccountPanel(){
   el('accountLoggedOut').hidden = !!brukerCache;
   el('accountLoggedInn').hidden = !brukerCache;
   if (!brukerCache) sikreTurnstileLastet();
-  if (brukerCache) el('accountKortnavn').textContent = brukerCache.kortnavn;
+  if (brukerCache) {
+    el('accountKortnavn').textContent = brukerCache.kortnavn;
+    el('accountVersion').textContent = `Bondøya v${APP_VERSION}`;
+  }
   // Kun kosmetisk — skjuler knappen for ikke-admins. Faktisk håndhevelse
   // skjer server-side (requireAdmin() på hvert admin-endepunkt), en
   // klientside-sjekk her er ingen sikkerhetsgrense i seg selv.
@@ -1224,15 +1227,18 @@ async function renderBrukerListe(){
   });
 }
 
-// Versjonen vises her — vanlige innloggede brukere har ellers ikke noe sted
-// å se hvilken versjon som kjører (etterspurt 2026-07-13; tidligere vist i
-// tillegg i ⚙️-panelet, fjernet 2026-08 sammen med hele GhStore-tilkoblingen,
-// se konsept.md "Avvikling av ⚙️-innstillingspanelet").
+// Versjonsnummeret FLYTTET herfra til accountPanel 2026-08-28 (design-review
+// av topBar-trengsel — status-pillen var alene ansvarlig for over 40 % av
+// topBar sin bredde på et 375px-skjermbilde, uten pusterom igjen til noe som
+// helst annet). Vanlige innloggede brukere har fortsatt et sted å se hvilken
+// versjon som kjører (etterspurt 2026-07-13; tidligere vist i ⚙️-panelet, så
+// i denne pillen, se konsept.md "Avvikling av ⚙️-innstillingspanelet") — bare
+// i Konto-panelet nå, ikke i toppen konstant.
 function updateSyncPill(){
   const pill = el('syncStatus');
   pill.hidden = false;
   if (!brukerCache) { pill.textContent = 'Logg på for artsobservasjoner (kontakt it-ansvarlig på butikken for invitasjon)'; return; }
-  pill.textContent = `${navigator.onLine ? '🟢 Tilkoblet' : '🟡 Offline'} · v${APP_VERSION}`;
+  pill.textContent = navigator.onLine ? '🟢 Tilkoblet' : '🟡 Offline';
 }
 
 // Elementer lagt i køen FØR ArrayBuffer-omleggingen i offline-queue.js kan
