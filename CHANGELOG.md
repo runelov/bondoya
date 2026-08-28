@@ -1,5 +1,26 @@
 # Endringslogg
 
+## 0.9.37 — KI-proxy: hybrid Artsorakel + Claude
+Oppfølging av 0.9.36-benchmarket: fullt 81-funns gullsett kjørt mot
+produksjons-Artsorakelet (`ai.artsdatabanken.no`, senere re-verifisert mot
+Artsdatabankens offisielle testendepunkt med ekte token — identisk
+resultat) viste Artsorakel klart foran Claude, 79 % mot 53 % topp-1, sterkest
+nettopp på appens dominerende/svakeste kategorier (plante 80 %, sopp 83 %).
+Se det delte notatet "Artsgjenkjenning: veivalg" for full metodikk og tall.
+
+`worker/ki-proxy/src/index.js` kaller nå Artsorakel og Claude parallelt for
+hvert bilde. Artsorakels rene latinsk-navn-svar løses opp mot Artsdatabankens
+taxon-søk (samme mønster som `arter.js` sitt artssøk) for norsk navn/artstype.
+Claude beholder rollen som eneste kilde til `saertrekk`-begrunnelsen (Artsorakel
+gir ingen tekst), og er fallback for pattedyr/sjøpattedyr (Claude vant klart der
+i benchmarket) og når Artsorakel er tom/utilgjengelig — datadrevet, ikke gjettet.
+
+Nye Worker-hemmeligheter (valgfrie — uten dem kjører Workeren ren-Claude som før):
+`ARTSORAKEL_ENDPOINT`, `ARTSORAKEL_TOKEN`. Artsdatabankens eksplisitte regel:
+kun selve appen (produksjons-Workeren) skal kalle `ai.artsdatabanken.no` —
+all lokal utvikling/testing går mot `ai.test.artsdatabanken.no` med et eget
+testtoken. Se `worker/ki-proxy/wrangler.toml` for hvordan de to settes per miljø.
+
 ## 0.9.36 — KI-proxy: hevet max_tokens, kandidatliste-utvidelse forkastet
 Del av en bredere gjennomgang av artsgjenkjenningens treffsikkerhet
 (2026-08-21, startet fra brukertilbakemelding om at Claude vision opplevdes

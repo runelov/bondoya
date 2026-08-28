@@ -6,14 +6,27 @@ routes = [
   { pattern = "ki.bondoya.no", custom_domain = true }
 ]
 
-# ANTHROPIC_API_KEY og APP_SHARED_SECRET settes IKKE her — sett dem med:
+# ANTHROPIC_API_KEY, APP_SHARED_SECRET, ARTSORAKEL_ENDPOINT og
+# ARTSORAKEL_TOKEN settes IKKE her — sett dem med:
 #   wrangler secret put ANTHROPIC_API_KEY
 #   wrangler secret put APP_SHARED_SECRET
+#   wrangler secret put ARTSORAKEL_ENDPOINT   (produksjon: https://ai.artsdatabanken.no/identify)
+#   wrangler secret put ARTSORAKEL_TOKEN      (produksjonstokenet fra Artsdatabanken)
 # aldri i denne filen eller noe annet sted i det offentlige repoet.
 # APP_SHARED_SECRET er en delt hemmelighet KUN denne appen kjenner — samme
 # idé som GitHub-tokenet, hindrer at andre kaller Worker-URL-en direkte og
-# bruker opp Anthropic-kredittene dine (CORS stopper kun nettlesere, ikke
-# curl/script). Generer f.eks. med: openssl rand -hex 32
+# bruker opp Anthropic-/Artsorakel-kredittene dine (CORS stopper kun
+# nettlesere, ikke curl/script). Generer f.eks. med: openssl rand -hex 32
+#
+# ARTSORAKEL_ENDPOINT/ARTSORAKEL_TOKEN er bevisst IKKE i [vars] under —
+# Artsdatabankens eksplisitte regel (2026-08-27) er at KUN denne produksjons-
+# Workeren skal kalle ai.artsdatabanken.no; all lokal utvikling/testing skal
+# gå mot ai.test.artsdatabanken.no. Et [vars]-oppføring her ville vært
+# standardverdien også for `wrangler dev` med mindre .dev.vars overstyrer —
+# risikabelt å glemme. Sett derfor testverdiene i worker/ki-proxy/.dev.vars
+# (gitignored) for lokal utvikling, kun produksjonsverdiene via
+# `wrangler secret put` for selve appen. Begge er valgfrie — uten dem
+# hopper Workeren over Artsorakel og kjører ren-Claude, se src/index.js.
 
 [vars]
 ANTHROPIC_MODEL = "claude-sonnet-5"
