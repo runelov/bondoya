@@ -2,8 +2,8 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.35';
-const APP_BUILD_DATE = '2026-08-14';
+const APP_VERSION = '0.9.38';
+const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
 // ingen build-step som lar de to dele en fil, så listen må holdes i synk
@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireDashboardPanel();
   wireFremdriftPanel();
   wireSheetDismiss();
+  wireVersionUpdateCheck();
 
   await haandterInvitasjonFraUrl();
 
@@ -1199,6 +1200,81 @@ async function renderQueueBadge(){
   }
 }
 
+// ---------- ny-versjon-varsel (PWA/standalone) ----------
+// En installert (standalone) PWA-instans oppdager ALDRI en ny utrulling av
+// seg selv bare ved å "åpnes igjen" — spesielt på iOS, der det ofte kun
+// gjenopptar en allerede kjørende side i stedet for å laste den på nytt.
+// sw.js sin nettverk-først-strategi (se den filen) løser dette for en
+// FERSK sidelasting, men ikke for en side som allerede står åpen i minnet.
+// Samme mønster som FungiFinder sin wireVersionUpdateCheck() (js/app.js
+// der, innført etter at en admin ikke oppdaget en ny funksjon ni deploys
+// etter at den ble skrudd på) — portert hit 2026-08-28.
+//
+// GitHub Pages ligger bak Fastly, som cacher /index.html PÅ TVERS AV ULIKE
+// QUERY-STRINGS (bekreftet 2026-08-28 mot bondoya.no: to identiske kall med
+// ulik ?query ga "x-cache: MISS" første gang, "x-cache: HIT" andre — samme
+// funn som i FungiFinder). `cache: 'no-store'` under omgår kun NETTLESERENS
+// egen cache, som er alt denne sjekken faktisk kan påvirke. Reell
+// konsekvens: en fersk utrulling kan ta opptil Fastly sin cache-levetid
+// (cache-control: max-age=600, ~10 min) før varselet i det hele tatt KAN
+// dukke opp — sjekken er informativ, ikke en garanti om at "Last inn på
+// nytt" alltid henter det aller nyeste med én gang.
+function versjonErNyere(server, kjorende){
+  const a = server.split('.').map(Number);
+  const b = kjorende.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const av = a[i] || 0, bv = b[i] || 0;
+    if (av !== bv) return av > bv;
+  }
+  return false;
+}
+
+function wireVersionUpdateCheck(){
+  const banner = el('updateBanner');
+  if (!banner) return;
+  const reloadBtn = el('updateReload');
+  const dismissBtn = el('updateDismiss');
+  const AVVIST_NOKKEL = 'bondoya-oppdatering-avvist-for';
+  let sjekkerNa = false;
+  let intervallId = null;
+
+  async function sjekkForNyVersjon(){
+    if (sjekkerNa || !banner.hidden) return;
+    sjekkerNa = true;
+    try {
+      const res = await fetch(location.origin + '/index.html', { cache: 'no-store' });
+      if (!res.ok) return;
+      const html = await res.text();
+      const m = html.match(/js\/app\.js\?v=([\d.]+)/);
+      if (!m || !versjonErNyere(m[1], APP_VERSION)) return;
+      if (localStorage.getItem(AVVIST_NOKKEL) === m[1]) return; // allerede avvist NETTOPP denne versjonen
+      banner.dataset.serverVersion = m[1];
+      banner.hidden = false;
+    } catch (e) {
+      // Stille — en nettverksfeil her skal ikke plage brukeren, prøver igjen ved neste sjekk.
+    } finally {
+      sjekkerNa = false;
+    }
+  }
+
+  reloadBtn.addEventListener('click', () => location.reload());
+  dismissBtn.addEventListener('click', () => {
+    if (banner.dataset.serverVersion) localStorage.setItem(AVVIST_NOKKEL, banner.dataset.serverVersion);
+    banner.hidden = true;
+  });
+
+  // Poller kun mens appen faktisk er synlig — ingen vits i å bruke
+  // nettverk/batteri på en bakgrunnsfane/-PWA, og visibilitychange-
+  // lytteren under fanger uansett opp øyeblikket den kommer tilbake.
+  function startPolling(){ if (!intervallId) intervallId = setInterval(sjekkForNyVersjon, 5 * 60 * 1000); }
+  function stopPolling(){ if (intervallId) { clearInterval(intervallId); intervallId = null; } }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { sjekkForNyVersjon(); startPolling(); }
+    else stopPolling();
+  });
+  if (document.visibilityState === 'visible') startPolling();
+}
+
 // ---------- artsforslag (stedsforankret plausibilitet) ----------
 
 function buildSpeciesHintList(){
@@ -1406,15 +1482,6 @@ const FOTOTIPS_HTML = `
     </ul>
   </div>`;
 
-// Vises sammen med FOTOTIPS_HTML når KI er usikker (kandidatliste vist) eller
-// ikke fant noe treff i det hele tatt — Artsdatabanken har ikke noe åpent API
-// for artsgjenkjenning som kan kobles mot taksonomien her (undersøkt 2026-07:
-// Artsorakel-appens egen backend, ai.artsdatabanken.no, er udokumentert og
-// uten publiserte vilkår for tredjepartsbruk), så i stedet lenkes brukeren
-// videre til Artsorakel-nettappen for en ny/uavhengig KI-vurdering av bildet.
-const ARTSORAKEL_HINT_HTML = `
-  <p class="hint">Usikker selv? <a href="https://orakel.artsdatabanken.no/" target="_blank" rel="noopener">Prøv Artsorakel</a> for en ny KI-vurdering av bildet.</p>`;
-
 function renderRegisterPanel(state){
   const c = el('registerContent');
   const previewUrl = pendingImageBlob ? URL.createObjectURL(pendingImageBlob) : null;
@@ -1473,10 +1540,9 @@ function renderRegisterPanel(state){
           </button>`;
         }).join('')}
       </div>
-      ${FOTOTIPS_HTML}
-      ${ARTSORAKEL_HINT_HTML}`;
+      ${FOTOTIPS_HTML}`;
   } else {
-    kiHtml = `<p class="hint">Fant ikke arten automatisk. Velg art manuelt under.</p>${FOTOTIPS_HTML}${ARTSORAKEL_HINT_HTML}`;
+    kiHtml = `<p class="hint">Fant ikke arten automatisk. Velg art manuelt under.</p>${FOTOTIPS_HTML}`;
   }
 
   const kildeLabel = { gps: '(GPS)', exif: '(fra bildet)', manuell: '(valgt manuelt)' }[pendingPositionKilde] || '';
