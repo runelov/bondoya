@@ -1,5 +1,33 @@
 # Endringslogg
 
+## 0.9.42 — Design-review: kart-kontroller restylet, topBar-trengsel løst
+Design-review av knappeplassering (brukertilbakemelding: lagvelgeren i
+kartet "virker malplassert"). Bekreftet at PLASSERINGEN alltid var riktig
+begrunnet (bottomleft unngår bevisst kollisjon med topBar/GPS/zoom, se
+`js/map.js`) — problemet var at zoom, GPS og lagvelger brukte Leaflets rå
+standard-styling (hvite firkanter, hard kant) i stedet for appens eget
+frostede glass-språk (`.iconBtn`/`.pill`/`.fab`), det eneste stedet i hele
+appen med det avviket.
+
+`css/styles.css` "leaflet control tweaks": zoom-knapper, GPS-knapp og
+lagvelger er nå sirkulære, frostet glass, samme skygge som resten av
+appen — Leaflets sammenslåtte "bar"-look (delt kant mellom stablede
+knapper) erstattet med atskilte sirkler og mellomrom, konsistent med at
+ingen andre knapper i appen er sammenslått. Ingen kontroll er FLYTTET,
+kun restylet.
+
+Målte faktisk topBar-bredden før noe ble endret (375px viewport, admin +
+innlogget): alle fem elementene satt med 0,7–0,8px mellomrom — null plass
+igjen til noe som helst, langt mindre et sjette ikon. Status-pillen
+("🟢 Tilkoblet · vX.X.X") sto for over 40 % av bredden alene.
+Versjonsnummeret er derfor FLYTTET fra pillen til Konto-panelet (fortsatt
+synlig for alle innloggede, bare et sted man aktivt oppsøker det i
+stedet for konstant i toppen) — ga reelt pusterom tilbake i topBar uten
+å fjerne funksjonalitet.
+
+Ryddet en utdatert kommentar i `js/map.js` som fortsatt refererte til
+⚙️-knappen fjernet i Fase C.
+
 ## 0.9.41 — Sjeldenhet i poengmodellen + nytt merke "Sjeldenhetsjeger"
 Se konsept.md "Sjeldenhet i poengmodellen" for full begrunnelse. Datagrunnlaget
 (REFERANSEDATA-KV, 13 694 observasjoner/289 arter innen 40 km, oppdatert

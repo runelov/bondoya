@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/styles.css?v=0.9.41">
+<link rel="stylesheet" href="css/styles.css?v=0.9.42">
 </head>
 <body>
 
@@ -66,6 +66,11 @@
   <div id="accountLoggedInn" hidden>
     <p>Logget inn som <strong id="accountKortnavn"></strong></p>
     <button id="loggUtBtn" class="secondaryBtn">Logg ut</button>
+    <!-- Flyttet fra syncStatus-pillen 2026-08-28 (design-review) — versjonsnummer
+         er ikke noe man trenger i farten, og tok mest plass av alt i en allerede
+         trang topBar. Fortsatt synlig for alle innloggede (ikke admin-gated),
+         bare et sted man aktivt oppsøker det i stedet for konstant i toppen. -->
+    <p class="hint" id="accountVersion"></p>
   </div>
   <!-- Sider (personvern osv.) — synlig uansett innloggingsstatus, listen filtreres server-side -->
   <div id="sideLenker"></div>
@@ -295,10 +300,10 @@
      Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
      sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
      allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
-<script src="js/api-client.js?v=0.9.41"></script>
-<script src="js/offline-queue.js?v=0.9.41"></script>
-<script src="js/ki-client.js?v=0.9.41"></script>
-<script src="js/map.js?v=0.9.41"></script>
-<script src="js/app.js?v=0.9.41"></script>
+<script src="js/api-client.js?v=0.9.42"></script>
+<script src="js/offline-queue.js?v=0.9.42"></script>
+<script src="js/ki-client.js?v=0.9.42"></script>
+<script src="js/map.js?v=0.9.42"></script>
+<script src="js/app.js?v=0.9.42"></script>
 </body>
 </html>

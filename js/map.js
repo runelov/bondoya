@@ -95,7 +95,11 @@ function initMap(){
 
   const baseLayers = { 'Kartverket (terreng)': topo };
   // bottomleft: Leaflets standard topright/bottomright kolliderer med appens
-  // egne ⚙️/📋-knapper (topBar) og GPS/zoom-knappene — bottomleft er ledig.
+  // egne topBar-knapper (👤/📋/📈/🛡️ — ⚙️-knappen nevnt her tidligere ble
+  // fjernet i Fase C, se konsept.md "Avvikling av ⚙️-innstillingspanelet")
+  // og GPS/zoom-knappene — bottomleft er ledig. Restylet (ikke flyttet)
+  // 2026-08-28, se css/styles.css "leaflet control tweaks" — plasseringen
+  // her var allerede riktig, problemet var ren Leaflet-standardstyling.
   // Ikke lagt til kartet her — offentlige besøkende har uansett kun ett
   // kartlag (Kartverket), så en lagvelger med ett valg er bare støy for dem.
   // Legges til/fjernes i settInnloggingsstatus i stedet, sammen med

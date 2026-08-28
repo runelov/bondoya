@@ -129,13 +129,90 @@ body{
 .fabSecondary:active{ transform: translateX(-50%) scale(0.9); }
 
 /* ---------- leaflet control tweaks ---------- */
+/* Restylet 2026-08-28 (design-review) — zoom/GPS/lagvelger brukte Leaflets
+   rå standardutseende (hvite firkanter, hard kant, tynn generisk skygge),
+   som var det eneste stedet i appen som ikke fulgte det frostede glass-
+   språket .iconBtn/.pill/.fab bruker overalt ellers. Lagvelgerens
+   PLASSERING (bottomleft) var allerede riktig begrunnet — se kommentaren i
+   js/map.js — dette er utelukkende en materialfiks, ingen kontroll er
+   flyttet. Leaflets sammenslåtte "bar"-look (delt kant mellom stablede
+   +/−-knapper) forkastet til fordel for atskilte sirkler, samme mønster
+   som resten av appen (ingen andre steder bruker sammenslåtte knapp-
+   grupper) — 8px mellomrom i stedet for delt kant.
+   leaflet-touch-varianten (aktiv på ekte mobil/berøring, bekreftet i DOM)
+   er 30px for zoom-knappene og 44px for lagvelger-ikonet i Leaflets egne
+   standardregler — locateBtn var allerede 44px, så denne størrelsen
+   beholdes for hele klyngen (zoom/GPS/lag) som en bevisst, litt mindre
+   skala enn topBar sine 48px — leser som "sekundære kart-kontroller",
+   ikke som appens hovednivå-ikoner. */
+
+.leaflet-bar{
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+}
+.leaflet-bar a,
+.leaflet-bar a:hover{
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  border: none !important;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 8px;
+  transition: transform 0.15s cubic-bezier(.2,.8,.2,1);
+}
+.leaflet-bar a:last-child{ margin-bottom: 0; }
+.leaflet-bar a:active{ transform: scale(0.92); }
+.leaflet-bar a.leaflet-disabled{ opacity: 0.4; }
 
 .locateBtn{
   width: 44px; height: 44px;
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
-  background: #fff;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
   cursor: pointer;
+  margin-bottom: 8px;
+  transition: transform 0.15s cubic-bezier(.2,.8,.2,1);
+}
+.locateBtn:active{ transform: scale(0.92); }
+
+.leaflet-control-layers{
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+}
+.leaflet-control-layers-toggle{
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background-color: rgba(255,255,255,0.85);
+  background-size: 20px 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+}
+/* Den utfoldede lag-lista beholder Leaflets egen liste-oppførsel (avkrysning
+   av kartlag er en kjent, native-følende mønster i seg selv) — kun
+   ytterkanten avrundes/mykes for å ikke stikke helt av fra resten. */
+.leaflet-control-layers-expanded{
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  border: none;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* ---------- bottom sheets ---------- */
