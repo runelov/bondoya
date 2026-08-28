@@ -6,14 +6,18 @@
 // klientkode) og gi raskt svar (1-3 sek) — se konsept.md for hvorfor dette
 // er ett unntak fra "alt er GitHub"-mønsteret.
 //
-// Kontrakt appen (js/ki-client.js) forventer — UENDRET siden hybriden ble
-// lagt til 2026-08-27:
+// Kontrakt appen (js/ki-client.js) forventer:
 //   POST multipart/form-data: bilde=<fil>, kandidater=<JSON-array>
 //   Header: X-App-Secret: <delt hemmelighet, samme idé som GitHub-tokenet>
-//   -> 200 { kandidater: [ { norsk, latinsk, artstype, konfidens, saertrekk }, ... ] }
+//   -> 200 { kandidater: [ { norsk, latinsk, artstype, taxonId, konfidens, saertrekk }, ... ] }
 // saertrekk: kort tekst om hva i AKKURAT DETTE bildet som peker mot denne
 // arten (og ev. skiller den fra de andre kandidatene) — vises i UI-en når KI
 // er usikker og gir flere alternativer, se candidateCard i js/app.js.
+// taxonId (0.9.45, portert fra søsterproduktet Ramme sin v0.1.3-fiks — se
+// losOppManglendeTaxonId() under) løses nå opp server-side for enhver
+// kandidat som mangler en, i stedet for å alltid være fraværende slik ren
+// Claude-bildegjenkjenning etterlater den. Kan fortsatt være `undefined`
+// hvis Artskart-oppslaget ikke gir noe treff — fail-open, se der.
 //
 // HYBRID (2026-08-27, se "Artsgjenkjenning: veivalg"-notatet for full
 // bakgrunn/tall): kaller nå BÅDE Claude vision OG Artsorakel-motoren
@@ -129,7 +133,8 @@ export default {
         return json({ error: claudeResultat.feil }, 502, cors);
       }
 
-      const endelig = await slaSammenKandidater(claudeResultat, artsorakelResultat);
+      const sammenslatt = await slaSammenKandidater(claudeResultat, artsorakelResultat);
+      const endelig = await losOppManglendeTaxonId(sammenslatt);
       return json({ kandidater: endelig }, 200, cors);
     } catch (e) {
       return json({ error: `Uventet feil i KI-proxyen: ${e.message}` }, 500, cors);
@@ -382,11 +387,41 @@ function lagArtsorakelKandidat(taxon, sannsynlighet, claudeKandidater) {
     norsk: taxon.norsk,
     latinsk: taxon.latinsk,
     artstype: taxon.artstype,
+    taxonId: taxon.taxonId, // MANGLET her tidligere (til 0.9.45) — se losOppManglendeTaxonId()
     konfidens: sannsynlighet,
     // Ærlig fallback fremfor å dikte opp en bildespesifikk begrunnelse
     // Artsorakel ikke har gitt oss noe grunnlag for — se toppkommentaren.
     saertrekk: treff ? treff.saertrekk : 'Foreslått av Artsorakel — ingen bildespesifikk begrunnelse tilgjengelig.',
   };
+}
+
+// Portert fra søsterproduktet Ramme (v0.1.3, samme kodebase-opphav — se
+// CLAUDE.md sin "Shared architecture"-seksjon). Reell konsekvens oppdaget
+// der ved faktisk bruk, og som gjelder identisk her: Claude vision gjør ren
+// bildegjenkjenning og oppgir ALDRI en taxonId (se hentClaudeKandidater()),
+// og lagArtsorakelKandidat() over mistet den til en egen, ubeslektet glipp
+// fram til 0.9.45. Uten taxonId kan verken "Oppdageren" eller "Rødlistejeger"
+// (se worker/api/src/lib/fremdrift.js) noensinne utløses for et funn
+// brukeren bare aksepterte KI-forslaget for, uten å bekrefte via artssøket
+// separat — badges er en bonusfunksjon her (ikke selve hovedpoenget, som i
+// Ramme), men svekkes på samme måte for enhver bruker som stoler direkte på
+// et KI-forslag. Løser opp taxonId server-side for ENHVER kandidat som
+// mangler en, via samme Artskart-taxon-oppslag Artsorakel-stien allerede
+// bruker. Fail-open ved oppslagsfeil/ikke-treff: kandidaten beholdes UTEN
+// taxonId fremfor å forsvinne.
+async function losOppManglendeTaxonId(kandidater) {
+  return Promise.all(
+    kandidater.map(async (k) => {
+      if (k.taxonId) return k;
+      const t = await losArtsorakelTaxon(k.latinsk).catch(() => null);
+      if (!t) return k;
+      // Overstyr Claude sin gjettede artstype med den autoritative
+      // taxonomi-utledningen når vi uansett har taxonId nå — samme prinsipp
+      // som worker/api/src/lib/taxonomi.js sin server-side-autoritative
+      // artstype-utledning fra taxonId ved lagring.
+      return { ...k, taxonId: t.taxonId, artstype: t.artstype };
+    })
+  );
 }
 
 // ---------- Delt ----------

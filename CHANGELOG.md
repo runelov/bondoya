@@ -1,5 +1,34 @@
 # Endringslogg
 
+## 0.9.45 — KI-forslag mangler ikke lenger taxonId
+Portert fra søsterproduktet Ramme (v0.1.3, samme kodebase-opphav — se
+CLAUDE.md "Shared architecture"). Dokumentert, bevisst akseptert
+begrensning her siden hybriden kom i 0.9.37: Claude vision gjør ren
+bildegjenkjenning og oppgir aldri en taxonId, og `lagArtsorakelKandidat()`
+mistet den ved en egen, ubeslektet glipp — konsekvensen er at en bruker som
+bare aksepterer et KI-forslag uten å bekrefte via artssøket, får
+`art_taxon_id = NULL` på funnet, og "Oppdageren"/"Rødlistejeger" (som
+begge krever taxonId, se `worker/api/src/lib/fremdrift.js`) kan da aldri
+utløses for den registreringen — selv om brukeren faktisk var først med
+arten. Badges er en bonusfunksjon her (ikke hovedpoenget, som i Ramme),
+men svekkes på samme måte.
+
+`worker/ki-proxy/src/index.js`: ny `losOppManglendeTaxonId()` kjører på den
+endelige kandidatlisten før den returneres, og slår opp taxonId mot
+Artskart (samme `losArtsorakelTaxon()`-oppslag Artsorakel-stien allerede
+bruker) for enhver kandidat som mangler en — både rene Claude-forslag og
+Artsorakel-kandidater. Fail-open: en kandidat uten oppslagstreff beholdes
+fortsatt, bare uten taxonId. `lagArtsorakelKandidat()` fikk samtidig
+taxonId lagt til i det returnerte objektet (den ubeslektede glippen over).
+
+`js/ki-client.js`: `beste`-objektet (brukt når konfidensen er høy nok til
+å auto-velge et forslag uten at brukeren ser kandidatkortene) tok tidligere
+kun med `norsk`/`latinsk` fra kandidaten — måtte utvides til å ta med
+`taxonId` også, ellers ville nettopp auto-aksept-stien (den vanligste veien
+inn i akkurat dette problemet) fortsatt aldri fått den. `alternativer`
+(kandidatkort-stien) beholdt allerede hele objektet uendret og trengte ingen
+endring.
+
 ## 0.9.44 — PWA-installasjonstilbud ("legg til på hjemskjermen")
 Implementerte planen godkjent 2026-08-28 (`konsept.md` "Backlog —
 PWA-onboarding"): portert FungiFinders `wireA2HS()`-mønster hit — samme
