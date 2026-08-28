@@ -21,3 +21,24 @@ export async function settFunnSynligForPublic(env, verdi) {
     .bind(NOKKEL_FUNN_SYNLIG_FOR_PUBLIC, verdi ? '1' : '0')
     .run();
 }
+
+// Fase D (leaderboard) — se konsept.md "Gamification". Samme mønster som
+// funn_synlig_for_public over: fail-closed (AV inntil admin eksplisitt
+// skrur den på), ingen ny migrasjon nødvendig.
+const NOKKEL_LEADERBOARD_AKTIVERT = 'leaderboard_aktivert';
+
+export async function erLeaderboardAktivert(env) {
+  const rad = await env.DB.prepare('SELECT verdi FROM innstillinger WHERE nokkel = ?')
+    .bind(NOKKEL_LEADERBOARD_AKTIVERT)
+    .first();
+  return rad?.verdi === '1';
+}
+
+export async function settLeaderboardAktivert(env, verdi) {
+  await env.DB.prepare(
+    `INSERT INTO innstillinger (nokkel, verdi) VALUES (?, ?)
+     ON CONFLICT(nokkel) DO UPDATE SET verdi = excluded.verdi`
+  )
+    .bind(NOKKEL_LEADERBOARD_AKTIVERT, verdi ? '1' : '0')
+    .run();
+}

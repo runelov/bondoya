@@ -529,6 +529,27 @@ body{
 .merkeDetaljTekst .prog{ color: #b06a00; font-weight: 700; }
 .merkeDetaljHint{ font-size: 12.5px; color: var(--ink-soft); font-style: italic; }
 
+/* ---------- leaderboard (Fase D) ---------- */
+/* Samme fargespråk/rytme som .scoreRow over — egen seksjon, ikke en egen
+   fane, se konsept.md "Fase D — Leaderboard". Tom/usett når admin har
+   skrudd funksjonen av (renderLeaderboard() i app.js setter da tom
+   innerHTML, ingen av reglene under vises). */
+#leaderboardSeksjon h3{ margin-top: 22px; }
+.leaderboardRow{
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; font-size: 13px;
+  border-radius: var(--radius-md);
+}
+.leaderboardRow:nth-child(odd){ background: #f5f5f7; }
+.leaderboardRow.deg{ box-shadow: 0 0 0 2px var(--accent) inset; font-weight: 600; }
+.leaderboardRank{
+  flex: 0 0 22px; text-align: center; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums; font-weight: 700;
+}
+.leaderboardNavn{ flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboardMerker{ flex: 0 0 auto; display: flex; gap: 2px; font-size: 14px; }
+.leaderboardPoeng{ flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+
 .posStatus{
   display: flex; align-items: center; gap: 8px;
   min-height: 44px;

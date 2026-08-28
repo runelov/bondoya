@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="css/styles.css?v=0.9.38">
+<link rel="stylesheet" href="css/styles.css?v=0.9.39">
 </head>
 <body>
 
@@ -76,6 +76,9 @@
   <div class="sheetHandle"></div>
   <h2>Min fremdrift</h2>
   <div id="fremdriftInnhold"></div>
+  <!-- Fase D — kun fylt/synlig når admin har skrudd leaderboardet på, se
+       renderLeaderboard() i app.js. Tom (og usett) ellers. -->
+  <div id="leaderboardSeksjon"></div>
 </div>
 
 <!-- Enkeltside (f.eks. personvern) -->
@@ -127,6 +130,11 @@
       <div><strong>Offentlig funnvisning</strong></div>
       <p class="hint">Når av: funn vises ikke i kartet eller funnlisten for besøkende uten innlogging, og det offentlige API-et returnerer ingen funn-data. Når på: funn filtreres alltid (rødliste og selvvalgte) som i dag.</p>
       <button id="funnSynligForPublicBtn" class="secondaryBtn"></button>
+    </div>
+    <div class="findRow" style="display:flex;flex-direction:column;align-items:stretch;gap:6px;margin-top:10px">
+      <div><strong>Leaderboard</strong></div>
+      <p class="hint">Når på: alle innloggede kan se en rangert liste over poengsum, arter og oppnådde merker for alle aktive brukere (i "Min fremdrift"-panelet). Kortnavn er allerede synlig for alle i funnlisten i dag — dette rangerer det, avslører ingen ny identitetskobling.</p>
+      <button id="leaderboardAktivertBtn" class="secondaryBtn"></button>
     </div>
   </div>
 
@@ -287,10 +295,10 @@
      Et statisk <script>-tag her kjørte scriptet (inkl. dets bakgrunns-PAT-
      sjekk mot challenges.cloudflare.com) for ALLE sidevisninger, også for
      allerede innloggede brukere som aldri ser innloggingsskjemaet. -->
-<script src="js/api-client.js?v=0.9.38"></script>
-<script src="js/offline-queue.js?v=0.9.38"></script>
-<script src="js/ki-client.js?v=0.9.38"></script>
-<script src="js/map.js?v=0.9.38"></script>
-<script src="js/app.js?v=0.9.38"></script>
+<script src="js/api-client.js?v=0.9.39"></script>
+<script src="js/offline-queue.js?v=0.9.39"></script>
+<script src="js/ki-client.js?v=0.9.39"></script>
+<script src="js/map.js?v=0.9.39"></script>
+<script src="js/app.js?v=0.9.39"></script>
 </body>
 </html>

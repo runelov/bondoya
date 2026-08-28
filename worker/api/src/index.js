@@ -3,7 +3,7 @@ import { corsHeaders } from './lib/cors.js';
 import { json } from './lib/json.js';
 import { rullerSesjonHvisNodvendig, sesjonCookieHeader } from './lib/session.js';
 import { beOmLenke, verifiser, loggUt } from './routes/auth.js';
-import { meg, hentFremdrift } from './routes/meg.js';
+import { meg, hentFremdrift, hentLeaderboard } from './routes/meg.js';
 import { listFunn, opprettFunn, oppdaterFunn, slettFunn, hentBilde } from './routes/funn.js';
 import {
   listBrukere, oppdaterBrukerStatus, slettBrukerPermanent, hentInnstillinger, oppdaterInnstillinger,
@@ -28,6 +28,7 @@ router.get('/auth/verifiser', verifiser);
 router.post('/auth/logg-ut', loggUt);
 router.get('/meg', meg);
 router.get('/meg/fremdrift', hentFremdrift);
+router.get('/leaderboard', hentLeaderboard);
 router.get('/funn', listFunn);
 router.post('/funn', opprettFunn);
 router.patch('/funn/:id', oppdaterFunn);

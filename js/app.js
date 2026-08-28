@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.38';
+const APP_VERSION = '0.9.39';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -328,6 +328,20 @@ function wireAdminPanel(){
     }
   });
 
+  el('leaderboardAktivertBtn').addEventListener('click', async () => {
+    const nyVerdi = !adminInnstillingerCache.leaderboardAktivert;
+    el('leaderboardAktivertBtn').disabled = true;
+    try {
+      adminInnstillingerCache = await window.ApiClient.settAdminInnstillinger({ leaderboardAktivert: nyVerdi });
+      oppdaterLeaderboardKnapp();
+      showToast(nyVerdi ? 'Leaderboard er nå PÅ.' : 'Leaderboard er nå AV.');
+    } catch (e) {
+      showToast('Feil: ' + e.message);
+    } finally {
+      el('leaderboardAktivertBtn').disabled = false;
+    }
+  });
+
   el('sideNyBtn').addEventListener('click', tomSideSkjema);
 
   el('sideLagreBtn').addEventListener('click', async () => {
@@ -535,7 +549,47 @@ function wireFremdriftPanel(){
   el('fremdriftToggle').addEventListener('click', async () => {
     toggleSheet('fremdriftPanel', true);
     await renderFremdrift();
+    await renderLeaderboard();
   });
+}
+
+// ---------- leaderboard (Fase D) ----------
+// Egen seksjon nederst i "Min fremdrift"-panelet, ikke egen fane — se
+// konsept.md "Fase D — Leaderboard" for begrunnelsen. Vises kun når admin
+// har skrudd funksjonen på (window.ApiClient.erLeaderboardAktivert(),
+// satt av siste meg()-kall — se api-client.js). Tom seksjon (ingen
+// nettverkskall i det hele tatt) når av, i stedet for å vise en feilmelding
+// fra et 403-svar.
+async function renderLeaderboard(){
+  const seksjon = el('leaderboardSeksjon');
+  if (!window.ApiClient.erLeaderboardAktivert()) { seksjon.innerHTML = ''; return; }
+
+  seksjon.innerHTML = '<h3>🏆 Leaderboard</h3><p class="hint">Laster …</p>';
+  let rangering;
+  try {
+    rangering = await window.ApiClient.hentLeaderboard();
+  } catch (e) {
+    seksjon.innerHTML = `<h3>🏆 Leaderboard</h3><p class="hint">Kunne ikke hente leaderboard: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  const rader = rangering.map((r, i) => {
+    // Sammenlignet på kortnavn, ikke bruker-id — /meg (og dermed
+    // brukerCache) gir aldri bruker-id til klienten, se meg() i api-client.js.
+    const duSelv = brukerCache && r.kortnavn === brukerCache.kortnavn;
+    const merkerHtml = r.merker
+      .map(m => `<span class="leaderboardMerke" title="${escapeHtml(m.navn)}">${MERKE_IKONER[m.nokkel] || '🏅'}</span>`)
+      .join('');
+    return `
+      <div class="leaderboardRow${duSelv ? ' deg' : ''}">
+        <span class="leaderboardRank">${i + 1}</span>
+        <span class="leaderboardNavn">${escapeHtml(r.kortnavn)}${duSelv ? ' <span class="hint">(deg)</span>' : ''}</span>
+        <span class="leaderboardMerker">${merkerHtml}</span>
+        <span class="leaderboardPoeng">${r.poengsum} p</span>
+      </div>`;
+  }).join('') || '<p class="hint">Ingen på leaderboardet ennå.</p>';
+
+  seksjon.innerHTML = `<h3>🏆 Leaderboard</h3>${rader}`;
 }
 
 // Tynn SVG-fremdriftsring rundt et låst merke (viser hvor nærme man er),
@@ -655,16 +709,22 @@ async function renderFremdrift(){
 
 async function renderInnstillinger(){
   const btn = el('funnSynligForPublicBtn');
+  const lbBtn = el('leaderboardAktivertBtn');
   btn.disabled = true;
+  lbBtn.disabled = true;
   btn.textContent = 'Laster …';
+  lbBtn.textContent = 'Laster …';
   try {
     adminInnstillingerCache = await window.ApiClient.hentAdminInnstillinger();
   } catch (e) {
     btn.textContent = 'Kunne ikke laste innstilling';
+    lbBtn.textContent = 'Kunne ikke laste innstilling';
     return;
   }
   oppdaterFunnSynlighetKnapp();
+  oppdaterLeaderboardKnapp();
   btn.disabled = false;
+  lbBtn.disabled = false;
 }
 
 function oppdaterFunnSynlighetKnapp(){
@@ -672,6 +732,15 @@ function oppdaterFunnSynlighetKnapp(){
   btn.textContent = adminInnstillingerCache.funnSynligForPublic
     ? 'Skru av offentlig funnvisning'
     : 'Skru på offentlig funnvisning';
+}
+
+// Fase D — leaderboard, se konsept.md "Gamification". Samme knapp-mønster
+// som oppdaterFunnSynlighetKnapp() over.
+function oppdaterLeaderboardKnapp(){
+  const btn = el('leaderboardAktivertBtn');
+  btn.textContent = adminInnstillingerCache.leaderboardAktivert
+    ? 'Skru av leaderboard'
+    : 'Skru på leaderboard';
 }
 
 // Delt av renderArtSokResultater (admin, under) og renderSpeciesResults
