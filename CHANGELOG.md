@@ -1,5 +1,15 @@
 # Endringslogg
 
+## 0.9.40 — Fiks: leaderboard-flagget oppdaterte seg ikke live for admin
+Funnet rett etter at leaderboardet ble skrudd på i produksjon (0.9.39):
+`window.ApiClient.erLeaderboardAktivert()` ble kun satt av det ENE
+`meg()`-kallet ved appstart (`sjekkSesjon()`) — en admin som skrudde
+bryteren på i en allerede åpen økt så ikke 🏆-seksjonen dukke opp uten å
+laste appen på nytt selv, selv om innstillingen faktisk var lagret
+server-side. `leaderboardAktivertBtn`-håndtereren kaller nå `meg()` på
+nytt etter en vellykket `PATCH /admin/innstillinger`, som oppdaterer det
+mellomlagrede flagget som bivirkning.
+
 ## 0.9.39 — Fase D: Leaderboard (admin-styrt av/på)
 Se konsept.md "Gamification: personlig fremdrift, poeng og badges" →
 "Fase D — Leaderboard" for full spesifikasjon og begrunnelse. Fase A
