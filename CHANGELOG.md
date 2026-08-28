@@ -1,5 +1,30 @@
 # Endringslogg
 
+## 0.9.43 — Skjul status-pillen når det ikke er noe å si, fjern grå kant på kart-kontroller
+To oppfølgingspunkter fra design-reviewen i 0.9.42.
+
+**Status-pillen ("🟢 Tilkoblet") skjules nå helt når tilkoblet og
+synk-køen er tom** — den klart vanligste tilstanden, og den eneste som
+egentlig ikke har noe å si. Vurdert og forkastet: å flytte den til en
+farget prikk på 👤-ikonet i stedet (se samtalen samme dato) — dette er en
+felt-app uten garantert dekning, og "offline"/"synk feilet" må forbli
+entydig tekst med direkte trykkbarhet, ikke bare farge på et ikon de færreste
+ville tenkt å sjekke. Offline vises fortsatt alltid, uansett kø-status;
+kø-status (venter/feilet) vises fortsatt alltid, uansett tilkobling.
+`renderQueueBadge()` fikk samtidig en reell liten bug fikset: når køen ble
+tømt var det ingen "tilbake til baseline"-gren, så pillen kunne bli
+stående med en utdatert "N venter på synk"-tekst etter en vellykket synk.
+
+**Fjernet en grå kant rundt de nettopp restylede kart-kontrollene**
+(zoom/GPS/lagvelger) — funnet av bruker rett etter forrige deploy.
+Rotårsak: Leaflet sin egen `leaflet.css` har en touch-spesifikk regel
+(`.leaflet-touch .leaflet-bar`/`.leaflet-control-layers`, to klasser) som
+er mer spesifikk enn vår enkle `.leaflet-bar`/`.leaflet-control-layers`
+(én klasse) — den vant uansett rekkefølge i filen. Løst med `!important`
+på de aktuelle egenskapene. Fanget underveis: samme fiks slo utilsiktet
+i hjel `.locateBtn` sin bakgrunn også (delt `.leaflet-bar`-klasse på
+samme element) — rettet i samme runde, verifisert i nettleser før commit.
+
 ## 0.9.42 — Design-review: kart-kontroller restylet, topBar-trengsel løst
 Design-review av knappeplassering (brukertilbakemelding: lagvelgeren i
 kartet "virker malplassert"). Bekreftet at PLASSERINGEN alltid var riktig

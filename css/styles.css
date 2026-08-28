@@ -146,10 +146,20 @@ body{
    skala enn topBar sine 48px — leser som "sekundære kart-kontroller",
    ikke som appens hovednivå-ikoner. */
 
+/* !important på border/box-shadow/background under er nødvendig, ikke bare
+   forsiktighet: Leaflet sin egen leaflet.css har en TOUCH-spesifikk regel,
+   `.leaflet-touch .leaflet-bar, .leaflet-touch .leaflet-control-layers`
+   (to klasser, spesifisitet 0,2,0), som legger på en 2px grå kant — mer
+   spesifikk enn vår enkle `.leaflet-bar`/`.leaflet-control-layers` (0,1,0),
+   så den vinner UANSETT rekkefølge i filen. Oppdaget 2026-08-28 (grå ramme
+   synlig i den ekte appen, usett i en tidligere mockup mot flat bakgrunn) —
+   #map sin container har alltid `leaflet-touch`-klassen i denne appen
+   (mobil/felt-først), så denne touch-regelen er alltid aktiv, ikke et
+   sjeldent skjermstørrelse-tilfelle. */
 .leaflet-bar{
-  border: none;
-  box-shadow: none;
-  background: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
   border-radius: 0;
 }
 .leaflet-bar a,
@@ -177,10 +187,17 @@ body{
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
-  background: rgba(255,255,255,0.85);
+  /* !important nødvendig: locateBtn ER selv en .leaflet-bar (delt klasse på
+     samme element, se js/map.js), og .leaflet-bar sin egen background
+     ble gjort !important over for å slå Leaflets touch-kant-regel — uten
+     !important her også vant DEN transparent-regelen over denne, og
+     locateBtn ble usynlig (kun 📍-emojien flyter, ingen synlig sirkel).
+     Oppdaget under verifisering 2026-08-28, rett etter selve fiksen. */
+  background: rgba(255,255,255,0.85) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12) !important;
+  border: none !important;
   cursor: pointer;
   margin-bottom: 8px;
   transition: transform 0.15s cubic-bezier(.2,.8,.2,1);
@@ -188,9 +205,9 @@ body{
 .locateBtn:active{ transform: scale(0.92); }
 
 .leaflet-control-layers{
-  border: none;
-  box-shadow: none;
-  background: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
   border-radius: 0;
 }
 .leaflet-control-layers-toggle{
