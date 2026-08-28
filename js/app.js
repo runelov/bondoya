@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.44';
+const APP_VERSION = '0.9.45';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -1797,9 +1797,11 @@ function renderRegisterPanel(state){
   // KI-kandidater) — manglet siden aller første MVP-commit, med den
   // konsekvens at art_taxon_id ble NULL i databasen for absolutt alle funn
   // (bekreftet 2026-07-16 mot produksjons-D1), uansett om arten kom fra et
-  // ekte Artsdatabanken-søketreff. KI-kandidater har uansett aldri en
-  // taxonId (ki-proxy gjør ren bildegjenkjenning, ikke taxonoppslag) — der
-  // blir feltet fortsatt undefined, som er korrekt.
+  // ekte Artsdatabanken-søketreff. KI-kandidater fikk lenge aldri en
+  // taxonId heller (ki-proxy gjorde ren bildegjenkjenning, ikke
+  // taxonoppslag) — fra 0.9.45 løser ki-proxyens losOppManglendeTaxonId()
+  // dette opp server-side (portert fra søsterproduktet Ramme), så feltet
+  // er nå bare undefined hvis det oppslaget ikke gir treff, ikke alltid.
   if (!pendingArt && beste && autoVelg) {
     pendingArt = { norsk: beste.art.norsk, latinsk: beste.art.latinsk, artstype: beste.artstype, taxonId: beste.art.taxonId };
   }
