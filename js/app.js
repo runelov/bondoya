@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.39';
+const APP_VERSION = '0.9.40';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -334,6 +334,16 @@ function wireAdminPanel(){
     try {
       adminInnstillingerCache = await window.ApiClient.settAdminInnstillinger({ leaderboardAktivert: nyVerdi });
       oppdaterLeaderboardKnapp();
+      // Uten dette forblir window.ApiClient.erLeaderboardAktivert() på
+      // verdien fra appstart (satt av det ENE meg()-kallet i sjekkSesjon())
+      // helt til neste fulle sideinnlasting — en admin som skrur bryteren
+      // på i en allerede åpen økt ser da ikke 🏆-seksjonen dukke opp uten å
+      // laste appen på nytt selv, selv om innstillingen faktisk er lagret
+      // server-side. meg() sin bivirkning (oppdatere det mellomlagrede
+      // flagget, se api-client.js) er alt vi trenger her — selve
+      // returverdien er irrelevant siden brukerCache uansett ikke endres av
+      // dette.
+      await window.ApiClient.meg();
       showToast(nyVerdi ? 'Leaderboard er nå PÅ.' : 'Leaderboard er nå AV.');
     } catch (e) {
       showToast('Feil: ' + e.message);
