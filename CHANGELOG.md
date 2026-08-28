@@ -1,5 +1,35 @@
 # Endringslogg
 
+## 0.9.41 — Sjeldenhet i poengmodellen + nytt merke "Sjeldenhetsjeger"
+Se konsept.md "Sjeldenhet i poengmodellen" for full begrunnelse. Datagrunnlaget
+(REFERANSEDATA-KV, 13 694 observasjoner/289 arter innen 40 km, oppdatert
+ukentlig via `bondoya-db`) fantes fra før — koblingen inn i selve
+poengsummen (`beregnFremdrift()`, `lib/fremdrift.js`) manglet.
+
+Trappetrinn (ikke kontinuerlig invers-frekvens-formel, samme designmønster
+som rødliste NT<VU<EN/CR): ≤5 lokale observasjoner = svært sjelden (15p),
+6-20 = sjelden (8p), 21-100 = mindre vanlig (3p), >100 eller ikke i
+289-artslista = vanlig/ikke sporet (0p) — poeng gis én gang per distinkt
+art, ikke per registrering. Bevisst **ingen** live fylkesoppslag-fallback
+for arter utenfor cachen: leaderboardet og admin-oversikten kaller allerede
+`beregnFremdrift()` én gang per aktiv bruker per sidevisning, og et
+eksternt Artsdatabanken-kall per ikke-cachet art per bruker ville
+multiplisert seg til en reell ytelses-/pålitelighetsrisiko i noe som
+allerede er i produksjon. Beregnes live ved hver forespørsel, ikke
+persistert — frekvenstall endrer seg kontinuerlig, i motsetning til
+rødlistekategori som er en stabil klassifisering verdt å fryse.
+
+Ny, alltid synlig (ikke bak et ⓘ-ikon) kilde-disclosure rett under "Sjeldne
+arter"-raden i poengforklaringen: brukeren skal se forbeholdet FØR de
+undrer seg over hvorfor et funn de trodde var sjeldent ga 0p.
+
+Nytt merke **Sjeldenhetsjeger** (💎), modellert nøyaktig som Rødlistejeger:
+trigges av laveste kvalifiserende trinn (sjelden ELLER svært sjelden, ikke
+bare toppnivå), beskrivelsen navngir konkret hvilken art som utløste det.
+
+Verifisert lokalt ende-til-ende mot ekte `wrangler dev` + D1 + KV (ekte
+frekvenstall for havelle/vipe/sitkagran) og visuelt i nettleser.
+
 ## 0.9.40 — Fiks: leaderboard-flagget oppdaterte seg ikke live for admin
 Funnet rett etter at leaderboardet ble skrudd på i produksjon (0.9.39):
 `window.ApiClient.erLeaderboardAktivert()` ble kun satt av det ENE

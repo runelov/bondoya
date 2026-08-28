@@ -7,10 +7,10 @@ import { finnOy } from './oyer.js';
 // — eksplisitt v1-beslutning i konsept.md, billig på denne skalaen
 // (10-15 brukere, noen hundre funn).
 //
-// Sjeldenhet er BEVISST utelatt fra poengformelen her: datakildene
-// (REFERANSEDATA-cachen / fylkesoppslag) flyttet server-side under Fase C,
-// men å veve dem inn i selve poengsummen er ikke et Fase A-leveranse-punkt
-// per konsept.md sin "Stegvis innføringsplan" — ikke glemt, bevisst utsatt.
+// Sjeldenhet (se lengre ned) ble lagt til 2026-08-28 — datagrunnlaget
+// (REFERANSEDATA-cachen) var lenge klart, men selve vektingen inn i
+// poengsummen var bevisst utsatt til etter Fase D (leaderboard), se
+// konsept.md "Sjeldenhet i poengmodellen — vurdering".
 
 // Ingen av disse tallene (utover 1p/registrering og 3p/ny art, som er gitt
 // direkte i konsept.md sin Poengmodell-tabell) er spesifisert numerisk der —
@@ -22,9 +22,76 @@ const POENG = {
   NY_ART: 3,
   NY_ARTSTYPE: 10,
   RODLISTE: { NT: 5, VU: 10, EN: 20, CR: 20 },
+  SJELDENHET: { svaert_sjelden: 15, sjelden: 8, mindre_vanlig: 3 },
   OPPDAGER: 25,
   OYHOPPER_PER_EKSTRA_KLYNGE: 15,
 };
+
+// Trappetrinn (ikke kontinuerlig invers-frekvens-formel — se vurderingen i
+// konsept.md for hvorfor: en rå K/frekvens-formel gir absurde utslag for en
+// art med kun 1 observasjon totalt). Terskler = antall observasjoner i den
+// lokale, 40 km-avgrensede Artskart-cachen (REFERANSEDATA-KV,
+// `bondoya-db/scripts/fetch_artskart.py`, oppdatert ukentlig, 289 arter per
+// 2026-08-28). En art som ikke finnes i cachen i det hele tatt (verken
+// registrert lokalt, eller genuint ikke i kandidatlista) behandles som
+// "vanlig" (0p) — IKKE som "sjeldnest mulig". Bevisst valg, se vurderingen:
+// motsatt ville gjort det trivielt å score høyt bare ved å finne noe
+// utenfor kandidatlista, uavhengig av faktisk sjeldenhet, og det ekte
+// alternativet (live oppslag mot Artsdatabanken per ikke-cachet art) ble
+// vurdert og forkastet av ytelsesgrunner — se samme sted i konsept.md.
+const SJELDENHET_TERSKLER = { SVAERT_SJELDEN: 5, SJELDEN: 20, MINDRE_VANLIG: 100 };
+const REFERANSEDATA_NOKKEL = 'lokale-observasjoner'; // samme nøkkel som routes/artskart.js
+
+function sjeldenhetKategori(frekvens) {
+  if (frekvens == null) return 'vanlig'; // ikke i cachen — se toppkommentar
+  if (frekvens <= SJELDENHET_TERSKLER.SVAERT_SJELDEN) return 'svaert_sjelden';
+  if (frekvens <= SJELDENHET_TERSKLER.SJELDEN) return 'sjelden';
+  if (frekvens <= SJELDENHET_TERSKLER.MINDRE_VANLIG) return 'mindre_vanlig';
+  return 'vanlig';
+}
+
+// Ett KV-kall per beregnFremdrift()-kall (altså ett per bruker når
+// GET /leaderboard eller GET /admin/fremdrift kaller den i en løkke) — bevisst
+// ikke delt/cachet på tvers av kallene i denne omgangen. KV-lesing er billig
+// nok til at N kall på denne skalaen (10-15 brukere) ikke er verdt
+// kompleksiteten det ville tatt å sende et forhåndshentet kart inn som
+// parameter i stedet — revurder kun hvis dette faktisk viser seg tregt i
+// praksis, se samme resonnement i konsept.md sin vurdering.
+async function hentFrekvensTabell(env) {
+  const frekvens = new Map();
+  if (!env.REFERANSEDATA) return frekvens; // ikke bundet lokalt i alle dev-oppsett
+  let lagret;
+  try {
+    lagret = await env.REFERANSEDATA.get(REFERANSEDATA_NOKKEL);
+  } catch {
+    return frekvens; // fail-closed: ingen sjeldenhetsbonus er tryggere enn å knekke hele fremdriftssiden
+  }
+  if (!lagret) return frekvens;
+  let data;
+  try {
+    data = JSON.parse(lagret);
+  } catch {
+    return frekvens;
+  }
+  for (const o of data.observasjoner || []) {
+    if (o.taxonId == null) continue;
+    frekvens.set(o.taxonId, (frekvens.get(o.taxonId) || 0) + 1);
+  }
+  return frekvens;
+}
+
+// Norsk tekst for antall sjeldne/svært sjeldne arter — kun de to
+// badge-relevante trinnene (ikke "mindre vanlig", som gir poeng men ikke
+// regnes som "sjelden" i vanlig forstand her), se scoreelementets detalj
+// og sjeldenhetsjeger-merket lengre ned.
+function beskrivSjeldneArter(sjeldneArter) {
+  const svaert = sjeldneArter.filter((a) => a.kategori === 'svaert_sjelden').length;
+  const sjelden = sjeldneArter.filter((a) => a.kategori === 'sjelden').length;
+  const deler = [];
+  if (svaert > 0) deler.push(`${svaert} svært ${svaert === 1 ? 'sjelden' : 'sjeldne'}`);
+  if (sjelden > 0) deler.push(`${sjelden} ${sjelden === 1 ? 'sjelden' : 'sjeldne'}`);
+  return deler.length ? deler.join(', ') : 'ingen sjeldne arter ennå';
+}
 
 const ARTSSAMLER_TERSKLER = [10, 25, 50];
 // Beskrivende navn i stedet for "Artssamler I/II/III" — produkttilbakemelding
@@ -119,6 +186,42 @@ export async function beregnFremdrift(brukerId, env) {
     .filter((f) => f.rodlistekategori)
     .sort((a, b) => (a.opprettet < b.opprettet ? -1 : 1))[0] ?? null;
 
+  // --- sjeldenhet (én gang per distinkt art, se toppkommentarene for
+  // trappetrinn/terskler/hvorfor "ikke i cachen" = "vanlig") ---
+  const frekvensTabell = await hentFrekvensTabell(env);
+  const sjeldenhetPerArt = new Map(); // art_taxon_id -> kategori
+  for (const taxonId of distinkteTaxonIder) {
+    sjeldenhetPerArt.set(taxonId, sjeldenhetKategori(frekvensTabell.get(taxonId)));
+  }
+  const sjeldenhetPoeng = [...sjeldenhetPerArt.values()].reduce(
+    (sum, kategori) => sum + (POENG.SJELDENHET[kategori] || 0),
+    0
+  );
+  // Kun de to badge-relevante trinnene (svært sjelden/sjelden) — "mindre
+  // vanlig" gir poeng, men regnes ikke som "sjelden" i UI-teksten, se
+  // beskrivSjeldneArter().
+  const sjeldneArter = [...sjeldenhetPerArt.entries()]
+    .filter(([, kategori]) => kategori === 'svaert_sjelden' || kategori === 'sjelden')
+    .map(([artTaxonId, kategori]) => ({
+      artTaxonId,
+      kategori,
+      frekvens: frekvensTabell.get(artTaxonId),
+      artNorsk: funn.find((f) => f.art_taxon_id === artTaxonId)?.art_norsk ?? null,
+    }));
+
+  // Arten som UTLØSTE Sjeldenhetsjeger-merket — først registrerte funn (etter
+  // opprettet) av en art i en badge-relevant kategori, samme mønster som
+  // rodlisteTrigger over.
+  const sjeldenhetTriggerFunn = funn
+    .filter((f) => {
+      const k = f.art_taxon_id ? sjeldenhetPerArt.get(f.art_taxon_id) : null;
+      return k === 'svaert_sjelden' || k === 'sjelden';
+    })
+    .sort((a, b) => (a.opprettet < b.opprettet ? -1 : 1))[0] ?? null;
+  const sjeldenhetTrigger = sjeldenhetTriggerFunn
+    ? { ...sjeldenhetTriggerFunn, kategori: sjeldenhetPerArt.get(sjeldenhetTriggerFunn.art_taxon_id), frekvens: frekvensTabell.get(sjeldenhetTriggerFunn.art_taxon_id) }
+    : null;
+
   // --- oppdager-bonus ---
   const egenForstePerArt = new Map();
   for (const f of funn) {
@@ -151,6 +254,7 @@ export async function beregnFremdrift(brukerId, env) {
     arter: antallArter * POENG.NY_ART,
     artstyper: distinkteArtstyper.size * POENG.NY_ARTSTYPE,
     rodliste: rodlistePoeng,
+    sjeldenhet: sjeldenhetPoeng,
     oppdager: oppdagetArter.length * POENG.OPPDAGER,
     oyhopper: Math.max(0, antallOyer - 1) * POENG.OYHOPPER_PER_EKSTRA_KLYNGE,
   };
@@ -177,6 +281,19 @@ export async function beregnFremdrift(brukerId, env) {
         ? `Første funn av en rødlistet (truet) art — ${rodlisteTrigger.art_norsk}, ${RODLISTE_LABELS[rodlisteTrigger.rodlistekategori]} (${rodlisteTrigger.rodlistekategori}).`
         : 'Første funn av en rødlistet (truet) art.',
       opptjent: rodlisteArter.length > 0,
+    },
+    {
+      nokkel: 'sjeldenhetsjeger',
+      navn: 'Sjeldenhetsjeger',
+      // Samme "navngi den konkrete arten"-mønster som Rødlistejeger over.
+      // Trigges av laveste kvalifiserende trinn (sjelden ELLER svært
+      // sjelden) — se konsept.md sin vurdering for hvorfor ikke bare
+      // toppnivået: for smalt til å være oppnåelig for et fellesskap på
+      // 10-15 brukere.
+      beskrivelse: sjeldenhetTrigger
+        ? `Første funn av en sjelden art — ${sjeldenhetTrigger.art_norsk}${sjeldenhetTrigger.kategori === 'svaert_sjelden' ? ' (svært sjelden' : ' (sjelden'}, ${sjeldenhetTrigger.frekvens} observasjon${sjeldenhetTrigger.frekvens === 1 ? '' : 'er'} lokalt).`
+        : 'Første funn av en sjelden eller svært sjelden art.',
+      opptjent: sjeldneArter.length > 0,
     },
     ...ARTSSAMLER_TERSKLER.map((mal, i) => ({
       nokkel: `artssamler_${i + 1}`,
@@ -233,6 +350,19 @@ export async function beregnFremdrift(brukerId, env) {
         { nokkel: 'arter', etikett: 'Ulike arter', poeng: score.arter, detalj: `${antallArter} arter` },
         { nokkel: 'artstyper', etikett: 'Artstype-dekning', poeng: score.artstyper, detalj: `${distinkteArtstyper.size} av ${ARTSTYPER.length} artstyper` },
         { nokkel: 'rodliste', etikett: 'Rødlistede arter', poeng: score.rodliste, detalj: `${rodlisteArter.length} rødlistede arter` },
+        {
+          nokkel: 'sjeldenhet',
+          etikett: 'Sjeldne arter',
+          poeng: score.sjeldenhet,
+          detalj: beskrivSjeldneArter(sjeldneArter),
+          // Alltid synlig kilde-disclosure, IKKE bak en tooltip — se
+          // konsept.md sin vurdering for hvorfor. Vist av klienten rett
+          // under denne raden (renderFremdrift() i js/app.js), ikke bare
+          // logget/dokumentert — brukeren skal se forbeholdet FØR de undrer
+          // seg over hvorfor et funn de trodde var sjeldent ga 0p.
+          kildeDisclosure:
+            'Sjeldenhet er beregnet fra en kuratert liste over kjente observasjoner nær Bondøya (289 arter, oppdatert ukentlig) — ikke en fullstendig oversikt over hva som faktisk finnes.',
+        },
         { nokkel: 'oppdager', etikett: 'Oppdager-bonus', poeng: score.oppdager, detalj: `${oppdagetArter.length} arter registrert først i fellesskapet` },
         { nokkel: 'oyhopper', etikett: 'Øyhopper', poeng: score.oyhopper, detalj: `funn registrert på ${antallOyer} øyer` },
       ],
@@ -243,6 +373,7 @@ export async function beregnFremdrift(brukerId, env) {
     antallArter,
     artstypeDekning: { totalt: ARTSTYPER.length, dekket: distinkteArtstyper.size, typer: artstypeTyper },
     rodliste: { arter: rodlisteArter },
+    sjeldenhet: { arter: sjeldneArter },
     oppdagetArter,
     oyhopper: { antallOyer, oyer: besokteOyer },
     badges,
