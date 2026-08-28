@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-const APP_VERSION = '0.9.42';
+const APP_VERSION = '0.9.43';
 const APP_BUILD_DATE = '2026-08-28';
 
 // Speilbilde av ARTSTYPER i worker/api/src/lib/taxonomi.js — appen har
@@ -1234,11 +1234,27 @@ async function renderBrukerListe(){
 // versjon som kjører (etterspurt 2026-07-13; tidligere vist i ⚙️-panelet, så
 // i denne pillen, se konsept.md "Avvikling av ⚙️-innstillingspanelet") — bare
 // i Konto-panelet nå, ikke i toppen konstant.
+//
+// Samme runde: pillen SKJULES HELT når tilkoblet og synk-køen er tom — "alt i
+// orden" er den klart vanligste tilstanden og trenger ikke egen plass i en
+// allerede trang topBar (brukertilbakemelding 2026-08-28, se design-review-
+// samtalen for hvorfor 👤-ikon-med-farget-prikk ble vurdert og forkastet:
+// dette er en felt-app uten garantert dekning, og "offline"/"synk feilet" må
+// forbli entydig tekst — ikke bare farge — samt beholde direkte trykkbarhet).
+// Offline vises ALLTID uansett kø, siden det er noe brukeren aktivt bør vite
+// mens de vurderer å registrere noe. renderQueueBadge() nedenfor er den som
+// faktisk avgjør endelig synlighet når det finnes en kø (kalles alltid etter
+// denne ved sync-forsøk/kø-endringer, se init-blokken og trySync()).
 function updateSyncPill(){
   const pill = el('syncStatus');
+  if (!brukerCache) {
+    pill.hidden = false;
+    pill.textContent = 'Logg på for artsobservasjoner (kontakt it-ansvarlig på butikken for invitasjon)';
+    return;
+  }
+  if (navigator.onLine) { pill.hidden = true; return; }
   pill.hidden = false;
-  if (!brukerCache) { pill.textContent = 'Logg på for artsobservasjoner (kontakt it-ansvarlig på butikken for invitasjon)'; return; }
-  pill.textContent = navigator.onLine ? '🟢 Tilkoblet' : '🟡 Offline';
+  pill.textContent = '🟡 Offline';
 }
 
 // Elementer lagt i køen FØR ArrayBuffer-omleggingen i offline-queue.js kan
@@ -1278,18 +1294,26 @@ async function trySync(){
 async function renderQueueBadge(){
   const items = await window.OfflineQueue.queueAll();
   const pill = el('syncStatus');
-  if (items.length > 0 && brukerCache) {
-    pill.hidden = false;
-    // 'feilet' vises atskilt fra 'venter'/'synker' — uten dette så et funn
-    // som faktisk HAR blitt forsøkt synket og feilet (se feilmelding i
-    // konsollen) identisk ut som ett som bare venter på sitt første forsøk,
-    // og brukeren fikk ikke noe signal om at noe var galt utover en toast
-    // som lett forsvinner ubemerket.
-    const feilet = items.filter(i => i.status === 'feilet').length;
-    pill.textContent = feilet > 0
-      ? `⚠️ ${feilet} feilet ved synk — trykk for å prøve igjen`
-      : `⏳ ${items.length} venter på synk`;
+  if (!brukerCache) return; // updateSyncPill() eier den uinnloggede meldingen
+  if (items.length === 0) {
+    // Ingenting i køen — tilbake til baseline (skjult hvis tilkoblet,
+    // "Offline" hvis ikke), se updateSyncPill(). Uten denne grenen ble
+    // pillen stående med en utdatert "N venter på synk"-tekst etter at
+    // køen faktisk var tømt (ren tekst-overskriving uten reset, aldri
+    // oppdaget siden pillen alltid var synlig fra før).
+    updateSyncPill();
+    return;
   }
+  pill.hidden = false;
+  // 'feilet' vises atskilt fra 'venter'/'synker' — uten dette så et funn
+  // som faktisk HAR blitt forsøkt synket og feilet (se feilmelding i
+  // konsollen) identisk ut som ett som bare venter på sitt første forsøk,
+  // og brukeren fikk ikke noe signal om at noe var galt utover en toast
+  // som lett forsvinner ubemerket.
+  const feilet = items.filter(i => i.status === 'feilet').length;
+  pill.textContent = feilet > 0
+    ? `⚠️ ${feilet} feilet ved synk — trykk for å prøve igjen`
+    : `⏳ ${items.length} venter på synk`;
 }
 
 // ---------- ny-versjon-varsel (PWA/standalone) ----------
