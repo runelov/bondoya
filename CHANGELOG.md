@@ -1,5 +1,23 @@
 # Endringslogg
 
+## 0.9.46 — wrangler oppgradert, lukker sharp/libheif-varsler
+Dependabot flagget to "high"-alvorlighetsvarsler
+([GHSA-g89c-p67h-r497](https://github.com/strukturag/libheif/security/advisories/GHSA-g89c-p67h-r497),
+GHSA-2jg2-4ch7-h545) i `sharp` (`< 0.35.4`), i både `worker/api` og
+`worker/ki-proxy`. `sharp` er ingen direkte avhengighet i noen av
+workerne — den kommer transitivt inn som dev-avhengighet via
+`wrangler` → `miniflare`, og brukes bare av `wrangler dev`s lokale
+simulator, ikke av selve den deployede Workeren. Reell risiko var derfor
+begrenset til lokal utvikling, ikke produksjon — men fikset likevel siden
+fiksen var en ren versjonsoppgradering.
+
+`wrangler` bumpet `^4.120.0` → `^4.134.0` i begge workernes
+`package.json`, som drar inn `miniflare@5.20260917.0-alpha` →
+`sharp@0.35.4` (patchet versjon). Verifisert med `npm ls sharp` i begge
+mapper, og at `wrangler dev` fortsatt starter rent i begge (`worker/api`
+svarer 404 på `/`, `worker/ki-proxy` 405 — begge forventet, ingen egen
+rute definert på root).
+
 ## 0.9.45 — KI-forslag mangler ikke lenger taxonId
 Portert fra søsterproduktet Ramme (v0.1.3, samme kodebase-opphav — se
 CLAUDE.md "Shared architecture"). Dokumentert, bevisst akseptert
