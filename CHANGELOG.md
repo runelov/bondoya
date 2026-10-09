@@ -1,5 +1,19 @@
 # Endringslogg
 
+## 0.9.47 — wrangler oppgradert, lukker undici-varsler
+Dependabot flagget seks varsler (1 high, 2 medium, 3 low) i `undici`
+(`< 7.29.1`) i både `worker/api` og `worker/ki-proxy` — bl.a. omgåelse
+av TLS-sertifikatvalidering i `BalancedPool` (high) og deling av
+`Set-Cookie` via delte cacher (medium). Som med `sharp` i 0.9.46 er
+`undici` ingen direkte avhengighet: den kommer transitivt inn via
+`wrangler` → `miniflare` og brukes bare av den lokale simulatoren, ikke
+av den deployede Workeren — reell risiko begrenset til lokal utvikling.
+
+`wrangler` bumpet `^4.134.0` → `^4.149.0` i begge workernes
+`package.json`, som drar inn `miniflare@5.20261006.1-alpha` →
+`undici@7.29.1` (og `sharp@0.35.5`). Verifisert med `npm ls undici`,
+`npm audit` (0 sårbarheter) og `wrangler deploy --dry-run` i begge mapper.
+
 ## 0.9.46 — wrangler oppgradert, lukker sharp/libheif-varsler
 Dependabot flagget to "high"-alvorlighetsvarsler
 ([GHSA-g89c-p67h-r497](https://github.com/strukturag/libheif/security/advisories/GHSA-g89c-p67h-r497),
